@@ -19,7 +19,7 @@ class TestComplexityCoverageSupplement:
         """Test maintainability index with substantial code."""
         config = RefactronConfig()
         analyzer = ComplexityAnalyzer(config)
-        
+
         # Create code that will definitely have measurable MI
         code = """
 def calculate_statistics(data):
@@ -59,7 +59,7 @@ def validate_input(value):
         """Test function length calculation when end_lineno is not available."""
         config = RefactronConfig(max_function_length=2)
         analyzer = ComplexityAnalyzer(config)
-        
+
         code = """
 def multi_line():
     x = 1
@@ -79,7 +79,7 @@ class TestCodeSmellCoverageSupplement:
         """Test import usage detection in various contexts."""
         config = RefactronConfig()
         analyzer = CodeSmellAnalyzer(config)
-        
+
         code = """
 import typing
 
@@ -95,7 +95,7 @@ def process(data):
         """Test pattern visitor exception handling in repeated code detection."""
         config = RefactronConfig()
         analyzer = CodeSmellAnalyzer(config)
-        
+
         code = """
 def process():
     x = 1
@@ -120,7 +120,7 @@ class TestDependencyCoverageSupplement:
         """Test import with alias."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 import numpy as np
 import pandas as pd
@@ -136,7 +136,7 @@ def process():
         """Test from import with alias."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 from collections import defaultdict as dd
 
@@ -152,7 +152,7 @@ def create():
         """Test detection of module usage via attributes."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 import os
 
@@ -168,7 +168,7 @@ def get_path():
         """Test multiple imports on same line."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 import sys, os
 import json, yaml
@@ -184,7 +184,7 @@ def process():
         """Test import order checking."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 from mymodule import something
 import sys
@@ -198,7 +198,7 @@ import os
         """Test relative import detection."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 from . import utils
 from .. import helpers
@@ -215,7 +215,7 @@ def process():
         """Test detection of duplicate imports."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 import os
 import sys
@@ -232,7 +232,7 @@ def process():
         """Test that __future__ imports are not flagged as unused."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 from __future__ import annotations
 
@@ -252,7 +252,7 @@ class TestSecurityCoverageSupplement:
         """Test detection of unsafe yaml.load()."""
         config = RefactronConfig()
         analyzer = SecurityAnalyzer(config)
-        
+
         code = """
 import yaml
 
@@ -268,7 +268,7 @@ def load_config(file):
         """Test SQL injection in executemany."""
         config = RefactronConfig()
         analyzer = SecurityAnalyzer(config)
-        
+
         code = """
 def insert_users(users):
     for user in users:
@@ -283,7 +283,7 @@ def insert_users(users):
         """Test SQL injection via string concatenation stored in variable."""
         config = RefactronConfig()
         analyzer = SecurityAnalyzer(config)
-        
+
         code = """
 def query_user(name):
     sql = "SELECT * FROM users WHERE name = " + name
@@ -297,7 +297,7 @@ def query_user(name):
         """Test SSRF with string concatenation."""
         config = RefactronConfig()
         analyzer = SecurityAnalyzer(config)
-        
+
         code = """
 import requests
 
@@ -313,7 +313,7 @@ def fetch(path):
         """Test SSRF in requests.put."""
         config = RefactronConfig()
         analyzer = SecurityAnalyzer(config)
-        
+
         code = """
 import requests
 
@@ -332,7 +332,7 @@ class TestPerformanceCoverageSupplement:
         """Test deeply nested list comprehension."""
         config = RefactronConfig()
         analyzer = PerformanceAnalyzer(config)
-        
+
         code = """
 def process():
     result = [[x for x in [y for y in [z for z in range(10)]]]
@@ -346,7 +346,7 @@ def process():
         """Test generator expression handling."""
         config = RefactronConfig()
         analyzer = PerformanceAnalyzer(config)
-        
+
         code = """
 def process():
     gen = (x for x in range(10))
@@ -361,7 +361,7 @@ def process():
         """Test detection of various query methods in loops."""
         config = RefactronConfig()
         analyzer = PerformanceAnalyzer(config)
-        
+
         code = """
 def process(items):
     for item in items:
@@ -387,7 +387,7 @@ class TestTypeHintCoverageSupplement:
         """Test that @property decorated methods are skipped."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 class MyClass:
     @property
@@ -403,7 +403,7 @@ class MyClass:
         """Test __init__ with explicit return."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 class MyClass:
     def __init__(self):
@@ -419,7 +419,7 @@ class MyClass:
         """Test function that doesn't return anything."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 def print_hello():
     print("hello")
@@ -432,7 +432,7 @@ def print_hello():
         """Test async function type hint checking."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 async def fetch_data(url: str):
     return await get(url)
@@ -448,7 +448,7 @@ async def process():
         """Test class attribute type hint checking."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 class MyClass:
     name = "test"
@@ -465,7 +465,7 @@ class MyClass:
         """Test detection of Any in parameters."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 from typing import Any
 
@@ -480,7 +480,7 @@ def process(data: Any, config: Any) -> None:
         """Test detection of incomplete Tuple type."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 from typing import Tuple, Set
 
@@ -501,7 +501,7 @@ class TestBaseAnalyzerCoverage:
     def test_base_analyzer_name_property(self) -> None:
         """Test that analyzers implement name property."""
         config = RefactronConfig()
-        
+
         analyzers = [
             ComplexityAnalyzer(config),
             CodeSmellAnalyzer(config),
@@ -511,7 +511,7 @@ class TestBaseAnalyzerCoverage:
             DependencyAnalyzer(config),
             TypeHintAnalyzer(config),
         ]
-        
+
         for analyzer in analyzers:
             assert isinstance(analyzer.name, str)
             assert len(analyzer.name) > 0
@@ -519,7 +519,7 @@ class TestBaseAnalyzerCoverage:
     def test_base_analyzer_analyze_method(self) -> None:
         """Test that analyzers implement analyze method."""
         config = RefactronConfig()
-        
+
         analyzers = [
             ComplexityAnalyzer(config),
             CodeSmellAnalyzer(config),
@@ -529,7 +529,7 @@ class TestBaseAnalyzerCoverage:
             DependencyAnalyzer(config),
             TypeHintAnalyzer(config),
         ]
-        
+
         for analyzer in analyzers:
             result = analyzer.analyze(Path("test.py"), "def test(): pass")
             assert isinstance(result, list)
@@ -541,7 +541,7 @@ class TestEdgeCasesForFullCoverage:
     def test_all_analyzers_with_whitespace_only(self) -> None:
         """Test all analyzers with whitespace-only code."""
         config = RefactronConfig()
-        
+
         analyzers = [
             ComplexityAnalyzer(config),
             CodeSmellAnalyzer(config),
@@ -551,9 +551,9 @@ class TestEdgeCasesForFullCoverage:
             DependencyAnalyzer(config),
             TypeHintAnalyzer(config),
         ]
-        
+
         code = "   \n\n   \n"
-        
+
         for analyzer in analyzers:
             issues = analyzer.analyze(Path("test.py"), code)
             assert isinstance(issues, list)
@@ -561,7 +561,7 @@ class TestEdgeCasesForFullCoverage:
     def test_all_analyzers_with_comment_only(self) -> None:
         """Test all analyzers with comment-only code."""
         config = RefactronConfig()
-        
+
         analyzers = [
             ComplexityAnalyzer(config),
             CodeSmellAnalyzer(config),
@@ -571,9 +571,9 @@ class TestEdgeCasesForFullCoverage:
             DependencyAnalyzer(config),
             TypeHintAnalyzer(config),
         ]
-        
+
         code = "# This is a comment\n# Another comment"
-        
+
         for analyzer in analyzers:
             issues = analyzer.analyze(Path("test.py"), code)
             assert isinstance(issues, list)
@@ -581,7 +581,7 @@ class TestEdgeCasesForFullCoverage:
     def test_all_analyzers_with_docstring_only(self) -> None:
         """Test all analyzers with module docstring only."""
         config = RefactronConfig()
-        
+
         analyzers = [
             ComplexityAnalyzer(config),
             CodeSmellAnalyzer(config),
@@ -591,9 +591,9 @@ class TestEdgeCasesForFullCoverage:
             DependencyAnalyzer(config),
             TypeHintAnalyzer(config),
         ]
-        
+
         code = '"""Module docstring."""'
-        
+
         for analyzer in analyzers:
             issues = analyzer.analyze(Path("test.py"), code)
             assert isinstance(issues, list)

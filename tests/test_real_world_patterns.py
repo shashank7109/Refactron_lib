@@ -19,7 +19,7 @@ class TestRealWorldComplexity:
         """Test detection of 'god function' antipattern."""
         config = RefactronConfig(max_function_complexity=10, max_function_length=30)
         analyzer = ComplexityAnalyzer(config)
-        
+
         code = """
 def process_user_request(request, user_id, session_id, permissions, settings):
     # Validation
@@ -75,7 +75,7 @@ def process_user_request(request, user_id, session_id, permissions, settings):
         """Test detection of deeply nested if-elif-else chains."""
         config = RefactronConfig()
         analyzer = ComplexityAnalyzer(config)
-        
+
         code = """
 def get_status_message(code):
     if code < 100:
@@ -135,7 +135,7 @@ class TestRealWorldCodeSmells:
         """Test detection of data clump (many parameters)."""
         config = RefactronConfig(max_parameters=5)
         analyzer = CodeSmellAnalyzer(config)
-        
+
         code = """
 def create_user(first_name, last_name, email, phone, address, city, state, 
                 zip_code, country, birth_date, gender, username, password):
@@ -163,7 +163,7 @@ def create_user(first_name, last_name, email, phone, address, city, state,
         """Test deeply nested code with multiple control structures."""
         config = RefactronConfig()
         analyzer = CodeSmellAnalyzer(config)
-        
+
         code = """
 def process_data(data):
     for item in data:
@@ -185,7 +185,7 @@ def process_data(data):
         """Test detection of magic numbers in real calculations."""
         config = RefactronConfig()
         analyzer = CodeSmellAnalyzer(config)
-        
+
         code = """
 def calculate_price(base_price):
     tax = base_price * 0.08  # Tax rate
@@ -203,7 +203,7 @@ def calculate_price(base_price):
         """Test detection of copy-pasted code blocks."""
         config = RefactronConfig()
         analyzer = CodeSmellAnalyzer(config)
-        
+
         code = """
 def process_orders(orders):
     # Process pending orders
@@ -255,7 +255,7 @@ class TestRealWorldDeadCode:
         """Test detection of legacy/unused code."""
         config = RefactronConfig()
         analyzer = DeadCodeAnalyzer(config)
-        
+
         code = """
 def process_data(data):
     result = transform(data)
@@ -280,7 +280,7 @@ def transform(data):
         """Test unreachable code after return."""
         config = RefactronConfig()
         analyzer = DeadCodeAnalyzer(config)
-        
+
         code = """
 def calculate(x):
     if x < 0:
@@ -305,7 +305,7 @@ class TestRealWorldSecurity:
         """Test SQL injection in ORM raw query."""
         config = RefactronConfig()
         analyzer = SecurityAnalyzer(config)
-        
+
         code = """
 from django.db import connection
 
@@ -323,7 +323,7 @@ def get_user_by_name(username):
         """Test command injection vulnerability."""
         config = RefactronConfig()
         analyzer = SecurityAnalyzer(config)
-        
+
         code = """
 import os
 import subprocess
@@ -339,7 +339,7 @@ def backup_file(filename):
         """Test potential path traversal with user input."""
         config = RefactronConfig()
         analyzer = SecurityAnalyzer(config)
-        
+
         code = """
 def read_user_file(filename):
     with open(f"/var/data/{filename}", "r") as f:
@@ -353,7 +353,7 @@ def read_user_file(filename):
         """Test hardcoded credentials."""
         config = RefactronConfig()
         analyzer = SecurityAnalyzer(config)
-        
+
         code = """
 DATABASE_CONFIG = {
     "host": "localhost",
@@ -379,7 +379,7 @@ class TestRealWorldPerformance:
         """Test classic N+1 query problem."""
         config = RefactronConfig()
         analyzer = PerformanceAnalyzer(config)
-        
+
         code = """
 def get_users_with_posts(user_ids):
     users = []
@@ -398,7 +398,7 @@ def get_users_with_posts(user_ids):
         """Test inefficient string concatenation."""
         config = RefactronConfig()
         analyzer = PerformanceAnalyzer(config)
-        
+
         code = """
 def generate_html(items):
     html = "<ul>"
@@ -414,7 +414,7 @@ def generate_html(items):
         """Test unnecessary list() wrapper."""
         config = RefactronConfig()
         analyzer = PerformanceAnalyzer(config)
-        
+
         code = """
 def process_numbers(data):
     squares = list([x**2 for x in data])
@@ -428,7 +428,7 @@ def process_numbers(data):
         """Test repeated expensive computation."""
         config = RefactronConfig()
         analyzer = PerformanceAnalyzer(config)
-        
+
         code = """
 def process_items(items):
     results = []
@@ -451,7 +451,7 @@ class TestRealWorldDependencies:
         """Test wildcard import detection."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 from os import *
 from sys import *
@@ -468,7 +468,7 @@ def main():
         """Test circular import detection."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 def process():
     import helpers
@@ -487,7 +487,7 @@ class DataProcessor:
         """Test deprecated module detection."""
         config = RefactronConfig()
         analyzer = DependencyAnalyzer(config)
-        
+
         code = """
 import imp
 import optparse
@@ -510,7 +510,7 @@ class TestRealWorldTypeHints:
         """Test public API function without type hints."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 def calculate_discount(price, discount_percent, customer_type):
     if customer_type == "premium":
@@ -528,7 +528,7 @@ def format_currency(amount, currency):
         """Test incomplete generic types."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 from typing import List, Dict, Optional
 
@@ -549,7 +549,7 @@ def find_user(user_id: int) -> Optional:
         """Test overuse of Any type."""
         config = RefactronConfig()
         analyzer = TypeHintAnalyzer(config)
-        
+
         code = """
 from typing import Any
 
@@ -570,7 +570,7 @@ class TestIntegrationRealWorld:
     def test_complete_application_analysis(self) -> None:
         """Test analysis of complete application code."""
         config = RefactronConfig()
-        
+
         analyzers = [
             ComplexityAnalyzer(config),
             CodeSmellAnalyzer(config),
@@ -580,7 +580,7 @@ class TestIntegrationRealWorld:
             DependencyAnalyzer(config),
             TypeHintAnalyzer(config),
         ]
-        
+
         code = """
 import os
 import sys
@@ -624,15 +624,15 @@ def calculate(x: Any) -> Any:
     # Type hint issues - using Any
     return x * 2
 """
-        
+
         all_issues = []
         for analyzer in analyzers:
             issues = analyzer.analyze(Path("app.py"), code)
             all_issues.extend(issues)
-        
+
         # Should detect multiple types of issues
         assert len(all_issues) >= 5
-        
+
         # Verify we have issues from multiple categories
         categories = set(issue.category.value for issue in all_issues)
         assert len(categories) >= 3
@@ -640,22 +640,22 @@ def calculate(x: Any) -> Any:
     def test_minimal_valid_code(self) -> None:
         """Test analysis of minimal but valid code."""
         config = RefactronConfig()
-        
+
         analyzers = [
             ComplexityAnalyzer(config),
             CodeSmellAnalyzer(config),
             DeadCodeAnalyzer(config),
         ]
-        
+
         code = """
 def hello():
     return "world"
 """
-        
+
         all_issues = []
         for analyzer in analyzers:
             issues = analyzer.analyze(Path("minimal.py"), code)
             all_issues.extend(issues)
-        
+
         # Minimal code might trigger docstring warnings
         assert isinstance(all_issues, list)
