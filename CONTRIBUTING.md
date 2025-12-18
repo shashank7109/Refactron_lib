@@ -28,34 +28,42 @@ git clone https://github.com/YOUR_USERNAME/Refactron_lib.git
 cd Refactron_lib
 ```
 
-### 2. Set Up Environment
+### 2. Set Up Environment (Automated)
+
+**Quick way (recommended):**
+
+```bash
+# On macOS/Linux:
+bash setup_dev.sh
+
+# On Windows:
+setup_dev.bat
+```
+
+This script will:
+- Create a virtual environment
+- Install all dependencies
+- Set up pre-commit hooks
+- Verify the installation
+- Run tests to ensure everything works
+
+**Manual way (if you prefer):**
+
 ```bash
 # Create virtual environment
 python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install in development mode
-pip install -e .
-pip install -r requirements-dev.txt
-```
+pip install -e ".[dev]"
 
-### 3. Install Pre-commit Hooks (Optional but Recommended)
-```bash
+# Install pre-commit hooks
 pip install pre-commit
 pre-commit install
-```
 
-### 4. Verify Installation
-```bash
-# Run tests
+# Verify installation
 pytest
-
-# Check code quality
-black --check refactron tests
-flake8 refactron --max-line-length=100
-
-# Try the CLI
-refactron --help
+refactron --version
 ```
 
 **You're ready to contribute!** See [Making Your First Contribution](#making-your-first-contribution) below.

@@ -84,8 +84,8 @@ Quick start:
 ```bash
 git clone https://github.com/Refactron-ai/Refactron_lib.git
 cd Refactron_lib
-pip install -e ".[dev]"
-pytest  # Make sure tests pass
+bash setup_dev.sh  # macOS/Linux - automatically sets everything up
+# OR setup_dev.bat  # Windows
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide. We follow the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
