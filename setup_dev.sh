@@ -49,10 +49,25 @@ echo ""
 echo "📥 Installing Refactron in development mode..."
 pip install -e ".[dev]" --quiet
 
-# Install additional dev dependencies if requirements-dev.txt exists
+# Install additional (non-core) dev dependencies if requirements-dev.txt exists
+# NOTE:
+#   - Core development tools (pytest, black, mypy, flake8, isort, etc.) are installed
+#     via the [dev] extra in pyproject.toml (see the pip install -e ".[dev]" above).
+#   - To avoid redundant installations and version conflicts, we only use
+#     requirements-dev.txt for *extra* tools such as documentation dependencies.
 if [ -f "requirements-dev.txt" ]; then
-    echo "📥 Installing additional development dependencies..."
-    pip install -r requirements-dev.txt --quiet
+    echo "📥 Installing additional documentation/development dependencies from requirements-dev.txt..."
+
+    # Extract Sphinx-related requirements (e.g., sphinx, sphinx-rtd-theme) from
+    # requirements-dev.txt and install only those. This avoids re-installing tools
+    # that are already provided by the [dev] extra.
+    DOC_REQUIREMENTS=$(grep -E '^[[:space:]]*sphinx' requirements-dev.txt || true)
+
+    if [ -n "$DOC_REQUIREMENTS" ]; then
+        echo "$DOC_REQUIREMENTS" | xargs -n1 pip install --quiet
+    else
+        echo "ℹ️  No additional documentation dependencies detected in requirements-dev.txt; skipping."
+    fi
 fi
 
 # Install pre-commit hooks
