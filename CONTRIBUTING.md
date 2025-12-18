@@ -34,7 +34,7 @@ cd Refactron_lib
 
 ```bash
 # On macOS/Linux:
-./setup_dev.sh
+bash setup_dev.sh
 
 # On Windows:
 setup_dev.bat
