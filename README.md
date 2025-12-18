@@ -84,7 +84,7 @@ Quick start:
 ```bash
 git clone https://github.com/Refactron-ai/Refactron_lib.git
 cd Refactron_lib
-./setup_dev.sh  # macOS/Linux - automatically sets everything up
+bash setup_dev.sh  # macOS/Linux - automatically sets everything up
 # OR setup_dev.bat  # Windows
 ```
 
