@@ -13,6 +13,13 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Check Python version (must be 3.8 or higher)
+python -c "import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)" >nul 2>&1
+if errorlevel 1 (
+    echo ❌ Error: Python 3.8 or higher is required.
+    echo Detected Python version is lower than 3.8.
+    exit /b 1
+)
 echo ✅ Python detected
 echo.
 
