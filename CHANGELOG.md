@@ -247,7 +247,7 @@ First production-ready beta release of Refactron!
 
 | Version | Date | Status | Highlights |
 |---------|------|--------|------------|
-| 1.0.1 | 2025-12-28 | **Stable** | Pre-commit hooks, benchmarks, improved documentation |
+| 1.0.1 | 2025-12-28 | **Stable** | Expanded analyzers, false positive reduction, performance analyzer, improved test coverage |
 | 1.0.0 | 2025-10-27 | **Stable** | Production-ready with auto-fix system |
 | 0.1.0 | 2025-10-25 | **Beta** | First production-ready release |
 | 0.0.1 | 2025-10-23 | Alpha | Initial development |
