@@ -26,7 +26,7 @@ class TestCLIBasics:
         runner = CliRunner()
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
-        assert "1.0.0" in result.output
+        assert "1.0.1" in result.output
 
 
 class TestAnalyzeCommand:
