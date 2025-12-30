@@ -6,6 +6,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from refactron import __version__
 from refactron.cli import analyze, init, main, refactor, report
 
 
@@ -26,7 +27,7 @@ class TestCLIBasics:
         runner = CliRunner()
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
-        assert "1.0.0" in result.output
+        assert __version__ in result.output
 
 
 class TestAnalyzeCommand:
