@@ -98,7 +98,11 @@ class BackupManager:
         session_dir = self.backup_dir / session_id
         session_dir.mkdir(parents=True, exist_ok=True)
 
-        relative_path = file_path.relative_to(self.root_dir)
+        try:
+            relative_path = file_path.relative_to(self.root_dir)
+        except ValueError:
+            relative_path = Path(file_path.name)
+
         backup_path = session_dir / relative_path
 
         backup_path.parent.mkdir(parents=True, exist_ok=True)
@@ -235,6 +239,35 @@ class BackupManager:
         self._index["sessions"] = []
         self._save_index()
         return count
+
+    def update_session_git_commit(self, session_id: str, commit_hash: Optional[str]) -> bool:
+        """
+        Update the Git commit hash for a session.
+
+        Args:
+            session_id: Session ID to update.
+            commit_hash: Git commit hash to associate with the session.
+
+        Returns:
+            True if successful, False if session not found.
+        """
+        for session in self._index["sessions"]:
+            if session["id"] == session_id:
+                session["git_commit"] = commit_hash
+                self._save_index()
+                return True
+        return False
+
+    def get_latest_session(self) -> Optional[Dict[str, Any]]:
+        """
+        Get the latest backup session.
+
+        Returns:
+            Latest session information or None if no sessions exist.
+        """
+        if self._index["sessions"]:
+            return self._index["sessions"][-1]
+        return None
 
 
 class GitIntegration:
@@ -423,11 +456,7 @@ class BackupRollbackSystem:
             commit_hash = self.git.create_pre_refactor_commit(
                 message=f"refactron: backup before {description}"
             )
-            for session in self.backup_manager._index["sessions"]:
-                if session["id"] == session_id:
-                    session["git_commit"] = commit_hash
-                    break
-            self.backup_manager._save_index()
+            self.backup_manager.update_session_git_commit(session_id, commit_hash)
 
         return session_id
 
@@ -454,13 +483,10 @@ class BackupRollbackSystem:
         }
 
         if use_git:
-            session = self.backup_manager.get_session(
-                session_id
-            ) if session_id else (
-                self.backup_manager._index["sessions"][-1]
-                if self.backup_manager._index["sessions"]
-                else None
-            )
+            if session_id:
+                session = self.backup_manager.get_session(session_id)
+            else:
+                session = self.backup_manager.get_latest_session()
 
             if session and session.get("git_commit"):
                 if self.git.git_rollback_to_commit(session["git_commit"]):

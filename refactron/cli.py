@@ -252,7 +252,9 @@ def refactor(
     session_id = None
     if not preview and cfg.backup_enabled:
         try:
-            backup_system = BackupRollbackSystem(target_path.parent if target_path.is_file() else target_path)
+            backup_root = target_path.parent if target_path.is_file() else target_path
+            backup_system = BackupRollbackSystem(backup_root)
+
             if target_path.is_file():
                 files = [target_path]
             else:
@@ -295,7 +297,7 @@ def refactor(
         console.print(result.show_diff())
 
     if session_id and not preview:
-        console.print(f"\n[dim]💡 Tip: Run 'refactron rollback' to undo these changes[/dim]")
+        console.print("\n[dim]💡 Tip: Run 'refactron rollback' to undo these changes[/dim]")
 
 
 @main.command()
