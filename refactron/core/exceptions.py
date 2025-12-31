@@ -10,7 +10,7 @@ from typing import Optional
 
 class RefactronError(Exception):
     """Base exception for all Refactron errors.
-    
+
     All custom exceptions in Refactron inherit from this class,
     allowing for easy catching of all Refactron-specific errors.
     """
@@ -22,7 +22,7 @@ class RefactronError(Exception):
         recovery_suggestion: Optional[str] = None,
     ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message describing what went wrong
             file_path: Optional path to the file that caused the error
@@ -44,7 +44,7 @@ class RefactronError(Exception):
 
 class AnalysisError(RefactronError):
     """Raised when code analysis fails.
-    
+
     This exception is raised when an analyzer encounters an error
     while processing source code. Common causes include:
     - Syntax errors in the source code
@@ -61,7 +61,7 @@ class AnalysisError(RefactronError):
         recovery_suggestion: Optional[str] = None,
     ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message describing what went wrong
             file_path: Optional path to the file being analyzed
@@ -69,7 +69,7 @@ class AnalysisError(RefactronError):
             recovery_suggestion: Optional suggestion for how to recover
         """
         self.analyzer_name = analyzer_name
-        
+
         # Provide default recovery suggestion if not specified
         if not recovery_suggestion:
             if "syntax" in message.lower():
@@ -78,7 +78,7 @@ class AnalysisError(RefactronError):
                 recovery_suggestion = "Ensure the file is saved with UTF-8 encoding"
             else:
                 recovery_suggestion = "Verify the file contains valid Python code"
-        
+
         super().__init__(message, file_path, recovery_suggestion)
 
     def __str__(self) -> str:
@@ -91,7 +91,7 @@ class AnalysisError(RefactronError):
 
 class RefactoringError(RefactronError):
     """Raised when code refactoring fails.
-    
+
     This exception is raised when a refactoring operation cannot be
     completed successfully. Common causes include:
     - Unable to parse the source code
@@ -108,7 +108,7 @@ class RefactoringError(RefactronError):
         recovery_suggestion: Optional[str] = None,
     ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message describing what went wrong
             file_path: Optional path to the file being refactored
@@ -116,16 +116,24 @@ class RefactoringError(RefactronError):
             recovery_suggestion: Optional suggestion for how to recover
         """
         self.operation_type = operation_type
-        
+
         # Provide default recovery suggestion if not specified
         if not recovery_suggestion:
             if "permission" in message.lower():
-                recovery_suggestion = "Check file permissions and ensure you have write access"
+                recovery_suggestion = (
+                    "Check file permissions and ensure you have write access"
+                )
             elif "backup" in message.lower():
-                recovery_suggestion = "Ensure sufficient disk space and write permissions for backup directory"
+                recovery_suggestion = (
+                    "Ensure sufficient disk space and write permissions "
+                    "for backup directory"
+                )
             else:
-                recovery_suggestion = "Try running the operation on a single file first to identify the issue"
-        
+                recovery_suggestion = (
+                    "Try running the operation on a single file first "
+                    "to identify the issue"
+                )
+
         super().__init__(message, file_path, recovery_suggestion)
 
     def __str__(self) -> str:
@@ -138,7 +146,7 @@ class RefactoringError(RefactronError):
 
 class ConfigError(RefactronError):
     """Raised when configuration is invalid or cannot be loaded.
-    
+
     This exception is raised when there are problems with the
     configuration. Common causes include:
     - Invalid YAML syntax in config file
@@ -155,7 +163,7 @@ class ConfigError(RefactronError):
         recovery_suggestion: Optional[str] = None,
     ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message describing what went wrong
             config_path: Optional path to the config file
@@ -163,18 +171,27 @@ class ConfigError(RefactronError):
             recovery_suggestion: Optional suggestion for how to recover
         """
         self.config_key = config_key
-        
+
         # Provide default recovery suggestion if not specified
         if not recovery_suggestion:
             if "not found" in message.lower() or "does not exist" in message.lower():
-                recovery_suggestion = "Create a config file using 'refactron init' or use default configuration"
+                recovery_suggestion = (
+                    "Create a config file using 'refactron init' "
+                    "or use default configuration"
+                )
             elif "yaml" in message.lower() or "syntax" in message.lower():
-                recovery_suggestion = "Check the YAML syntax in your configuration file"
+                recovery_suggestion = (
+                    "Check the YAML syntax in your configuration file"
+                )
             elif config_key:
-                recovery_suggestion = f"Check the value for '{config_key}' in your configuration"
+                recovery_suggestion = (
+                    f"Check the value for '{config_key}' in your configuration"
+                )
             else:
-                recovery_suggestion = "Verify your configuration file follows the expected format"
-        
+                recovery_suggestion = (
+                    "Verify your configuration file follows the expected format"
+                )
+
         super().__init__(message, config_path, recovery_suggestion)
 
     def __str__(self) -> str:

@@ -10,7 +10,7 @@ from refactron.core.models import CodeIssue, FileMetrics, IssueLevel
 @dataclass
 class FileAnalysisError:
     """Represents an error that occurred while analyzing a file."""
-    
+
     file_path: Path
     error_message: str
     error_type: str

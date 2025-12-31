@@ -101,7 +101,7 @@ class Refactron:
 
         Returns:
             AnalysisResult containing all detected issues and any errors encountered
-            
+
         Note:
             This method implements graceful degradation - if individual files fail
             to analyze, they are logged and skipped, allowing analysis to continue
@@ -151,13 +151,13 @@ class Refactron:
 
     def _analyze_file(self, file_path: Path) -> FileMetrics:
         """Analyze a single file.
-        
+
         Args:
             file_path: Path to file to analyze
-            
+
         Returns:
             FileMetrics with analysis results
-            
+
         Raises:
             AnalysisError: If file cannot be analyzed
         """
@@ -229,7 +229,7 @@ class Refactron:
 
         Returns:
             RefactorResult containing all proposed operations
-            
+
         Note:
             This method implements graceful degradation - if individual files fail
             to refactor, they are logged and skipped, allowing refactoring to continue
@@ -267,14 +267,14 @@ class Refactron:
         operation_types: Optional[List[str]] = None,
     ) -> List:
         """Refactor a single file.
-        
+
         Args:
             file_path: Path to file to refactor
             operation_types: Specific operation types to apply
-            
+
         Returns:
             List of refactoring operations
-            
+
         Raises:
             RefactoringError: If file cannot be refactored
         """
