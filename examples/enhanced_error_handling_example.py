@@ -12,7 +12,7 @@ import logging
 import tempfile
 from pathlib import Path
 
-from refactron import AnalysisError, ConfigError, RefactoringError, Refactron
+from refactron import ConfigError, Refactron
 from refactron.core.config import RefactronConfig
 
 # Enable logging to see error details
@@ -103,7 +103,7 @@ def example_2_config_error_handling():
     # Try to load a non-existent config file
     print("\nTrying to load non-existent config file...")
     try:
-        config = RefactronConfig.from_file(Path("/nonexistent/config.yaml"))
+        RefactronConfig.from_file(Path("/nonexistent/config.yaml"))
     except ConfigError as e:
         print(f"❌ ConfigError caught: {e}")
         print(f"   File path: {e.file_path}")
@@ -116,7 +116,7 @@ def example_2_config_error_handling():
         invalid_config_path = Path(f.name)
 
     try:
-        config = RefactronConfig.from_file(invalid_config_path)
+        RefactronConfig.from_file(invalid_config_path)
     except ConfigError as e:
         print(f"❌ ConfigError caught: {e}")
         print(f"   💡 Suggestion: {e.recovery_suggestion}")

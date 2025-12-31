@@ -205,9 +205,14 @@ class Refactron:
                 metrics.issues.extend(issues)
             except Exception as e:
                 # Log analyzer failure but continue with other analyzers
-                logger.warning(
-                    f"Analyzer {analyzer.name} failed for {file_path}: {e}", exc_info=True
-                )
+                # Use debug level for expected errors, warning for unexpected
+                if isinstance(e, AnalysisError):
+                    logger.debug(f"Analyzer {analyzer.name} failed for {file_path}: {e}")
+                else:
+                    logger.warning(
+                        f"Analyzer {analyzer.name} failed for {file_path}: {e}",
+                        exc_info=True,
+                    )
                 # Don't raise - allow other analyzers to run
 
         return metrics

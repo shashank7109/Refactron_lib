@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from refactron.core.exceptions import (
     AnalysisError,
     ConfigError,
@@ -85,6 +83,22 @@ class TestAnalysisError:
         )
         assert error.recovery_suggestion == "Custom recovery suggestion"
 
+    def test_analysis_error_complete_formatting(self) -> None:
+        """Test analysis error with all parameters combined."""
+        file_path = Path("/path/to/file.py")
+        error = AnalysisError(
+            "Parse error",
+            file_path=file_path,
+            analyzer_name="ComplexityAnalyzer",
+            recovery_suggestion="Check the syntax",
+        )
+        error_str = str(error)
+        # Verify all components appear in correct order
+        assert "[ComplexityAnalyzer]" in error_str
+        assert "Parse error" in error_str
+        assert "file.py" in error_str
+        assert "💡 Suggestion: Check the syntax" in error_str
+
 
 class TestRefactoringError:
     """Test RefactoringError exception."""
@@ -121,6 +135,22 @@ class TestRefactoringError:
             recovery_suggestion="Custom recovery suggestion",
         )
         assert error.recovery_suggestion == "Custom recovery suggestion"
+
+    def test_refactoring_error_complete_formatting(self) -> None:
+        """Test refactoring error with all parameters combined."""
+        file_path = Path("/path/to/file.py")
+        error = RefactoringError(
+            "Cannot refactor",
+            file_path=file_path,
+            operation_type="extract_method",
+            recovery_suggestion="Review the code structure",
+        )
+        error_str = str(error)
+        # Verify all components appear in correct order
+        assert "[extract_method]" in error_str
+        assert "Cannot refactor" in error_str
+        assert "file.py" in error_str
+        assert "💡 Suggestion: Review the code structure" in error_str
 
 
 class TestConfigError:
@@ -167,6 +197,22 @@ class TestConfigError:
             recovery_suggestion="Custom recovery suggestion",
         )
         assert error.recovery_suggestion == "Custom recovery suggestion"
+
+    def test_config_error_complete_formatting(self) -> None:
+        """Test config error with all parameters combined."""
+        config_path = Path("/path/to/config.yaml")
+        error = ConfigError(
+            "Invalid configuration",
+            config_path=config_path,
+            config_key="max_complexity",
+            recovery_suggestion="Use a positive integer value",
+        )
+        error_str = str(error)
+        # Verify all components appear in correct order
+        assert "[config key: max_complexity]" in error_str
+        assert "Invalid configuration" in error_str
+        assert "config.yaml" in error_str
+        assert "💡 Suggestion: Use a positive integer value" in error_str
 
 
 class TestExceptionInheritance:

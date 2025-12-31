@@ -83,9 +83,17 @@ class AnalysisError(RefactronError):
 
     def __str__(self) -> str:
         """Return a formatted error message."""
-        msg = super().__str__()
+        # Get the base message before parent formatting
+        base_message = Exception.__str__(self)
         if self.analyzer_name:
-            msg = f"[{self.analyzer_name}] {msg}"
+            base_message = f"[{self.analyzer_name}] {base_message}"
+
+        # Now apply parent formatting
+        msg = base_message
+        if self.file_path:
+            msg = f"{msg} (file: {self.file_path})"
+        if self.recovery_suggestion:
+            msg = f"{msg}\n💡 Suggestion: {self.recovery_suggestion}"
         return msg
 
 
@@ -123,22 +131,28 @@ class RefactoringError(RefactronError):
                 recovery_suggestion = "Check file permissions and ensure you have write access"
             elif "backup" in message.lower():
                 recovery_suggestion = (
-                    "Ensure sufficient disk space and write permissions "
-                    "for backup directory"
+                    "Ensure sufficient disk space and write permissions " "for backup directory"
                 )
             else:
                 recovery_suggestion = (
-                    "Try running the operation on a single file first "
-                    "to identify the issue"
+                    "Try running the operation on a single file first " "to identify the issue"
                 )
 
         super().__init__(message, file_path, recovery_suggestion)
 
     def __str__(self) -> str:
         """Return a formatted error message."""
-        msg = super().__str__()
+        # Get the base message before parent formatting
+        base_message = Exception.__str__(self)
         if self.operation_type:
-            msg = f"[{self.operation_type}] {msg}"
+            base_message = f"[{self.operation_type}] {base_message}"
+
+        # Now apply parent formatting
+        msg = base_message
+        if self.file_path:
+            msg = f"{msg} (file: {self.file_path})"
+        if self.recovery_suggestion:
+            msg = f"{msg}\n💡 Suggestion: {self.recovery_suggestion}"
         return msg
 
 
@@ -174,8 +188,7 @@ class ConfigError(RefactronError):
         if not recovery_suggestion:
             if "not found" in message.lower() or "does not exist" in message.lower():
                 recovery_suggestion = (
-                    "Create a config file using 'refactron init' "
-                    "or use default configuration"
+                    "Create a config file using 'refactron init' " "or use default configuration"
                 )
             elif "yaml" in message.lower() or "syntax" in message.lower():
                 recovery_suggestion = "Check the YAML syntax in your configuration file"
@@ -188,7 +201,15 @@ class ConfigError(RefactronError):
 
     def __str__(self) -> str:
         """Return a formatted error message."""
-        msg = super().__str__()
+        # Get the base message before parent formatting
+        base_message = Exception.__str__(self)
         if self.config_key:
-            msg = f"[config key: {self.config_key}] {msg}"
+            base_message = f"[config key: {self.config_key}] {base_message}"
+
+        # Now apply parent formatting
+        msg = base_message
+        if self.file_path:
+            msg = f"{msg} (file: {self.file_path})"
+        if self.recovery_suggestion:
+            msg = f"{msg}\n💡 Suggestion: {self.recovery_suggestion}"
         return msg

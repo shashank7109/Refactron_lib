@@ -84,7 +84,8 @@ def _print_status_messages(summary: dict) -> None:
     """Print status messages based on analysis results."""
     if summary.get("files_failed", 0) > 0:
         console.print(
-            f"[yellow]⚠️  {summary['files_failed']} file(s) failed analysis and were skipped[/yellow]"
+            f"[yellow]⚠️  {summary['files_failed']} file(s) failed analysis "
+            f"and were skipped[/yellow]"
         )
 
     if summary["total_issues"] == 0 and summary.get("files_failed", 0) == 0:
@@ -205,6 +206,9 @@ def analyze(target: str, config: Optional[str], detailed: bool) -> None:
 
     TARGET: Path to file or directory to analyze
     """
+    # Setup logging
+    _setup_logging()
+
     console.print("\n🔍 [bold blue]Refactron Analysis[/bold blue]\n")
 
     # Setup
@@ -269,6 +273,9 @@ def refactor(
 
     TARGET: Path to file or directory to refactor
     """
+    # Setup logging
+    _setup_logging()
+
     console.print("\n🔧 [bold blue]Refactron Refactoring[/bold blue]\n")
 
     # Setup

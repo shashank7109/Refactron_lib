@@ -7,7 +7,7 @@ import pytest
 
 from refactron import Refactron
 from refactron.core.config import RefactronConfig
-from refactron.core.exceptions import AnalysisError, ConfigError
+from refactron.core.exceptions import ConfigError
 
 
 class TestGracefulDegradation:
