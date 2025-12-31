@@ -6,6 +6,8 @@ from typing import Any, Dict, List
 
 import yaml
 
+from refactron.core.exceptions import ConfigError
+
 
 @dataclass
 class RefactronConfig:
@@ -77,17 +79,54 @@ class RefactronConfig:
 
     @classmethod
     def from_file(cls, config_path: Path) -> "RefactronConfig":
-        """Load configuration from a YAML file."""
+        """Load configuration from a YAML file.
+
+        Args:
+            config_path: Path to the YAML configuration file
+
+        Returns:
+            RefactronConfig instance with loaded settings
+
+        Raises:
+            ConfigError: If config file cannot be loaded or parsed
+        """
         if not config_path.exists():
-            return cls()
+            raise ConfigError(
+                f"Configuration file not found: {config_path}",
+                config_path=config_path,
+            )
 
-        with open(config_path, "r") as f:
-            config_dict = yaml.safe_load(f) or {}
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config_dict = yaml.safe_load(f) or {}
+        except yaml.YAMLError as e:
+            raise ConfigError(
+                f"Invalid YAML syntax in configuration file: {e}",
+                config_path=config_path,
+            ) from e
+        except (IOError, OSError) as e:
+            raise ConfigError(
+                f"Failed to read configuration file: {e}",
+                config_path=config_path,
+            ) from e
 
-        return cls(**config_dict)
+        try:
+            return cls(**config_dict)
+        except TypeError as e:
+            raise ConfigError(
+                f"Invalid configuration options: {e}",
+                config_path=config_path,
+            ) from e
 
     def to_file(self, config_path: Path) -> None:
-        """Save configuration to a YAML file."""
+        """Save configuration to a YAML file.
+
+        Args:
+            config_path: Path where configuration should be saved
+
+        Raises:
+            ConfigError: If config file cannot be written
+        """
         config_dict = {
             "enabled_analyzers": self.enabled_analyzers,
             "enabled_refactorers": self.enabled_refactorers,
@@ -107,8 +146,17 @@ class RefactronConfig:
             "security_min_confidence": self.security_min_confidence,
         }
 
-        with open(config_path, "w") as f:
-            yaml.dump(config_dict, f, default_flow_style=False)
+        try:
+            # Ensure directory exists
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.dump(config_dict, f, default_flow_style=False)
+        except (IOError, OSError) as e:
+            raise ConfigError(
+                f"Failed to write configuration file: {e}",
+                config_path=config_path,
+            ) from e
 
     @classmethod
     def default(cls) -> "RefactronConfig":

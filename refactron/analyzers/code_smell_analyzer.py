@@ -287,10 +287,12 @@ class CodeSmellAnalyzer(BaseAnalyzer):
             try:
                 # Replace all constant values and names to create a pattern
                 class PatternVisitor(ast.NodeTransformer):
-                    def visit_Constant(self, node):
+                    def visit_Constant(
+                        self, node: ast.Constant
+                    ) -> ast.Constant:  # type: ignore[override]
                         return ast.Constant(value="CONST")
 
-                    def visit_Name(self, node):
+                    def visit_Name(self, node: ast.Name) -> ast.AST:  # type: ignore[override]
                         if isinstance(node.ctx, ast.Store):
                             # Keep variable names on the left side of assignments
                             return node

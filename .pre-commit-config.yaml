@@ -46,4 +46,5 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-PyYAML]
-        args: ['--ignore-missing-imports', '--no-strict-optional']
+        args: ['--ignore-missing-imports', '--no-strict-optional', '--config-file=pyproject.toml']
+        exclude: ^(tests/|examples/|benchmarks/|real_world_tests/)

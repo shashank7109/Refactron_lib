@@ -42,7 +42,7 @@ class BackupManager:
         if self.index_file.exists():
             try:
                 with open(self.index_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    return json.load(f)  # type: ignore[no-any-return]
             except (json.JSONDecodeError, OSError):
                 return {"sessions": [], "version": "1.0"}
         return {"sessions": [], "version": "1.0"}
@@ -203,7 +203,7 @@ class BackupManager:
         Returns:
             List of session information dictionaries.
         """
-        return self._index["sessions"]
+        return self._index["sessions"]  # type: ignore[no-any-return]
 
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -217,7 +217,7 @@ class BackupManager:
         """
         for session in self._index["sessions"]:
             if session["id"] == session_id:
-                return session
+                return session  # type: ignore[no-any-return]
         return None
 
     def clear_session(self, session_id: str) -> bool:
@@ -282,7 +282,7 @@ class BackupManager:
             Latest session information or None if no sessions exist.
         """
         if self._index["sessions"]:
-            return self._index["sessions"][-1]
+            return self._index["sessions"][-1]  # type: ignore[no-any-return]
         return None
 
 

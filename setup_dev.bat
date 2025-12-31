@@ -125,4 +125,3 @@ echo    venv\Scripts\activate
 echo.
 echo Happy coding! 🚀
 pause
-

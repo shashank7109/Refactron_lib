@@ -132,4 +132,3 @@ echo "💡 To activate the environment in the future, run:"
 echo "   source venv/bin/activate"
 echo ""
 echo "Happy coding! 🚀"
-

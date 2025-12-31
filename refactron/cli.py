@@ -1,5 +1,6 @@
 """Command-line interface for Refactron."""
 
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -10,10 +11,22 @@ from rich.table import Table
 from refactron import Refactron
 from refactron.autofix.engine import AutoFixEngine
 from refactron.autofix.models import FixRiskLevel
+from refactron.core.analysis_result import AnalysisResult
 from refactron.core.backup import BackupRollbackSystem
 from refactron.core.config import RefactronConfig
+from refactron.core.exceptions import ConfigError
 
 console = Console()
+
+
+def _setup_logging(verbose: bool = False) -> None:
+    """Setup logging configuration."""
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
 
 def _load_config(config_path: Optional[str]) -> RefactronConfig:
@@ -23,8 +36,13 @@ def _load_config(config_path: Optional[str]) -> RefactronConfig:
             console.print(f"[dim]📄 Loading config from: {config_path}[/dim]")
             return RefactronConfig.from_file(Path(config_path))
         return RefactronConfig.default()
+    except ConfigError as e:
+        console.print(f"[red]❌ Configuration Error: {e}[/red]")
+        if e.recovery_suggestion:
+            console.print(f"[yellow]💡 {e.recovery_suggestion}[/yellow]")
+        raise SystemExit(1)
     except Exception as e:
-        console.print(f"[red]❌ Error loading configuration: {e}[/red]")
+        console.print(f"[red]❌ Unexpected error loading configuration: {e}[/red]")
         raise SystemExit(1)
 
 
@@ -50,7 +68,10 @@ def _create_summary_table(summary: dict) -> Table:
     table.add_column("Metric", style="cyan")
     table.add_column("Value", justify="right", style="green")
 
-    table.add_row("Files Analyzed", str(summary["total_files"]))
+    table.add_row("Files Found", str(summary["total_files"]))
+    table.add_row("Files Analyzed", str(summary["files_analyzed"]))
+    if summary.get("files_failed", 0) > 0:
+        table.add_row("Files Failed", str(summary["files_failed"]))
     table.add_row("Total Issues", str(summary["total_issues"]))
     table.add_row("🔴 Critical", str(summary["critical"]))
     table.add_row("❌ Errors", str(summary["errors"]))
@@ -62,8 +83,18 @@ def _create_summary_table(summary: dict) -> Table:
 
 def _print_status_messages(summary: dict) -> None:
     """Print status messages based on analysis results."""
-    if summary["total_issues"] == 0:
+    if summary.get("files_failed", 0) > 0:
+        console.print(
+            f"[yellow]⚠️  {summary['files_failed']} file(s) failed analysis "
+            f"and were skipped[/yellow]"
+        )
+
+    if summary["total_issues"] == 0 and summary.get("files_failed", 0) == 0:
         console.print("[green]✨ Excellent! No issues found.[/green]")
+    elif summary["total_issues"] == 0 and summary.get("files_failed", 0) > 0:
+        console.print(
+            "[yellow]⚠️  No issues found in analyzed files, but some files failed.[/yellow]"
+        )
     elif summary["critical"] > 0:
         console.print(
             f"[red]⚠️  Found {summary['critical']} critical issue(s) that need immediate "
@@ -71,7 +102,7 @@ def _print_status_messages(summary: dict) -> None:
         )
 
 
-def _print_detailed_issues(result) -> None:
+def _print_detailed_issues(result: AnalysisResult) -> None:
     """Print detailed issues list."""
     console.print("[bold]Detailed Issues:[/bold]\n")
     level_icons = {
@@ -176,6 +207,9 @@ def analyze(target: str, config: Optional[str], detailed: bool) -> None:
 
     TARGET: Path to file or directory to analyze
     """
+    # Setup logging
+    _setup_logging()
+
     console.print("\n🔍 [bold blue]Refactron Analysis[/bold blue]\n")
 
     # Setup
@@ -240,6 +274,9 @@ def refactor(
 
     TARGET: Path to file or directory to refactor
     """
+    # Setup logging
+    _setup_logging()
+
     console.print("\n🔧 [bold blue]Refactron Refactoring[/bold blue]\n")
 
     # Setup
