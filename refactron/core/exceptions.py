@@ -82,13 +82,12 @@ class AnalysisError(RefactronError):
         super().__init__(message, file_path, recovery_suggestion)
 
     def __str__(self) -> str:
-        """Return a formatted error message."""
-        # Get the base message before parent formatting
+        """Return a formatted error message with optional analyzer context."""
         base_message = Exception.__str__(self)
         if self.analyzer_name:
             base_message = f"[{self.analyzer_name}] {base_message}"
 
-        # Now apply parent formatting
+        # Use parent formatting by temporarily updating the message
         msg = base_message
         if self.file_path:
             msg = f"{msg} (file: {self.file_path})"
@@ -141,13 +140,12 @@ class RefactoringError(RefactronError):
         super().__init__(message, file_path, recovery_suggestion)
 
     def __str__(self) -> str:
-        """Return a formatted error message."""
-        # Get the base message before parent formatting
+        """Return a formatted error message with optional operation type context."""
         base_message = Exception.__str__(self)
         if self.operation_type:
             base_message = f"[{self.operation_type}] {base_message}"
 
-        # Now apply parent formatting
+        # Use parent formatting by temporarily updating the message
         msg = base_message
         if self.file_path:
             msg = f"{msg} (file: {self.file_path})"
@@ -200,13 +198,12 @@ class ConfigError(RefactronError):
         super().__init__(message, config_path, recovery_suggestion)
 
     def __str__(self) -> str:
-        """Return a formatted error message."""
-        # Get the base message before parent formatting
+        """Return a formatted error message with optional config key context."""
         base_message = Exception.__str__(self)
         if self.config_key:
             base_message = f"[config key: {self.config_key}] {base_message}"
 
-        # Now apply parent formatting
+        # Use parent formatting by temporarily updating the message
         msg = base_message
         if self.file_path:
             msg = f"{msg} (file: {self.file_path})"
