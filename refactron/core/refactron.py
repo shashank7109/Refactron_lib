@@ -1,5 +1,6 @@
 """Main Refactron class - the entry point for all operations."""
 
+import logging
 import os
 from pathlib import Path
 from typing import List, Optional, Union
@@ -12,8 +13,9 @@ from refactron.analyzers.dependency_analyzer import DependencyAnalyzer
 from refactron.analyzers.performance_analyzer import PerformanceAnalyzer
 from refactron.analyzers.security_analyzer import SecurityAnalyzer
 from refactron.analyzers.type_hint_analyzer import TypeHintAnalyzer
-from refactron.core.analysis_result import AnalysisResult
+from refactron.core.analysis_result import AnalysisResult, FileAnalysisError
 from refactron.core.config import RefactronConfig
+from refactron.core.exceptions import AnalysisError, RefactoringError
 from refactron.core.models import FileMetrics
 from refactron.core.refactor_result import RefactorResult
 from refactron.refactorers.add_docstring_refactorer import AddDocstringRefactorer
@@ -22,6 +24,9 @@ from refactron.refactorers.extract_method_refactorer import ExtractMethodRefacto
 from refactron.refactorers.magic_number_refactorer import MagicNumberRefactorer
 from refactron.refactorers.reduce_parameters_refactorer import ReduceParametersRefactorer
 from refactron.refactorers.simplify_conditionals_refactorer import SimplifyConditionalsRefactorer
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class Refactron:
@@ -95,7 +100,12 @@ class Refactron:
             target: Path to file or directory to analyze
 
         Returns:
-            AnalysisResult containing all detected issues
+            AnalysisResult containing all detected issues and any errors encountered
+            
+        Note:
+            This method implements graceful degradation - if individual files fail
+            to analyze, they are logged and skipped, allowing analysis to continue
+            on remaining files.
         """
         target_path = Path(target)
 
@@ -110,38 +120,96 @@ class Refactron:
         result = AnalysisResult(total_files=len(files))
 
         for file_path in files:
-            file_metrics = self._analyze_file(file_path)
-            result.file_metrics.append(file_metrics)
-            result.total_issues += file_metrics.issue_count
+            try:
+                file_metrics = self._analyze_file(file_path)
+                result.file_metrics.append(file_metrics)
+                result.total_issues += file_metrics.issue_count
+            except AnalysisError as e:
+                # Log the error and add to failed files list
+                logger.warning(f"Failed to analyze {file_path}: {e}")
+                result.failed_files.append(
+                    FileAnalysisError(
+                        file_path=file_path,
+                        error_message=str(e),
+                        error_type=e.__class__.__name__,
+                        recovery_suggestion=e.recovery_suggestion,
+                    )
+                )
+            except Exception as e:
+                # Catch unexpected errors to ensure analysis continues
+                logger.error(f"Unexpected error analyzing {file_path}: {e}", exc_info=True)
+                result.failed_files.append(
+                    FileAnalysisError(
+                        file_path=file_path,
+                        error_message=str(e),
+                        error_type=e.__class__.__name__,
+                        recovery_suggestion="Check the file for syntax errors or encoding issues",
+                    )
+                )
 
         return result
 
     def _analyze_file(self, file_path: Path) -> FileMetrics:
-        """Analyze a single file."""
-        with open(file_path, "r", encoding="utf-8") as f:
-            source_code = f.read()
+        """Analyze a single file.
+        
+        Args:
+            file_path: Path to file to analyze
+            
+        Returns:
+            FileMetrics with analysis results
+            
+        Raises:
+            AnalysisError: If file cannot be analyzed
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                source_code = f.read()
+        except UnicodeDecodeError as e:
+            raise AnalysisError(
+                f"Failed to read file due to encoding error: {e}",
+                file_path=file_path,
+            ) from e
+        except (IOError, OSError) as e:
+            raise AnalysisError(
+                f"Failed to read file: {e}",
+                file_path=file_path,
+            ) from e
 
         # Initialize basic metrics
-        lines = source_code.split("\n")
-        loc = len([line for line in lines if line.strip() and not line.strip().startswith("#")])
-        comment_lines = len([line for line in lines if line.strip().startswith("#")])
-        blank_lines = len([line for line in lines if not line.strip()])
+        try:
+            lines = source_code.split("\n")
+            loc = len([line for line in lines if line.strip() and not line.strip().startswith("#")])
+            comment_lines = len([line for line in lines if line.strip().startswith("#")])
+            blank_lines = len([line for line in lines if not line.strip()])
 
-        metrics = FileMetrics(
-            file_path=file_path,
-            lines_of_code=loc,
-            comment_lines=comment_lines,
-            blank_lines=blank_lines,
-            complexity=0.0,
-            maintainability_index=100.0,
-            functions=0,
-            classes=0,
-        )
+            metrics = FileMetrics(
+                file_path=file_path,
+                lines_of_code=loc,
+                comment_lines=comment_lines,
+                blank_lines=blank_lines,
+                complexity=0.0,
+                maintainability_index=100.0,
+                functions=0,
+                classes=0,
+            )
+        except Exception as e:
+            raise AnalysisError(
+                f"Failed to compute basic metrics: {e}",
+                file_path=file_path,
+            ) from e
 
-        # Run all analyzers
+        # Run all analyzers with individual error handling
         for analyzer in self.analyzers:
-            issues = analyzer.analyze(file_path, source_code)
-            metrics.issues.extend(issues)
+            try:
+                issues = analyzer.analyze(file_path, source_code)
+                metrics.issues.extend(issues)
+            except Exception as e:
+                # Log analyzer failure but continue with other analyzers
+                logger.warning(
+                    f"Analyzer {analyzer.name} failed for {file_path}: {e}",
+                    exc_info=True
+                )
+                # Don't raise - allow other analyzers to run
 
         return metrics
 
@@ -161,6 +229,11 @@ class Refactron:
 
         Returns:
             RefactorResult containing all proposed operations
+            
+        Note:
+            This method implements graceful degradation - if individual files fail
+            to refactor, they are logged and skipped, allowing refactoring to continue
+            on remaining files.
         """
         target_path = Path(target)
 
@@ -175,8 +248,16 @@ class Refactron:
         result = RefactorResult(preview_mode=preview)
 
         for file_path in files:
-            operations = self._refactor_file(file_path, operation_types)
-            result.operations.extend(operations)
+            try:
+                operations = self._refactor_file(file_path, operation_types)
+                result.operations.extend(operations)
+            except RefactoringError as e:
+                # Log the error and continue with other files
+                logger.warning(f"Failed to refactor {file_path}: {e}")
+                # Store error in result if needed (RefactorResult could be extended)
+            except Exception as e:
+                # Catch unexpected errors to ensure refactoring continues
+                logger.error(f"Unexpected error refactoring {file_path}: {e}", exc_info=True)
 
         return result
 
@@ -185,19 +266,49 @@ class Refactron:
         file_path: Path,
         operation_types: Optional[List[str]] = None,
     ) -> List:
-        """Refactor a single file."""
-        with open(file_path, "r", encoding="utf-8") as f:
-            source_code = f.read()
+        """Refactor a single file.
+        
+        Args:
+            file_path: Path to file to refactor
+            operation_types: Specific operation types to apply
+            
+        Returns:
+            List of refactoring operations
+            
+        Raises:
+            RefactoringError: If file cannot be refactored
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                source_code = f.read()
+        except UnicodeDecodeError as e:
+            raise RefactoringError(
+                f"Failed to read file due to encoding error: {e}",
+                file_path=file_path,
+            ) from e
+        except (IOError, OSError) as e:
+            raise RefactoringError(
+                f"Failed to read file: {e}",
+                file_path=file_path,
+            ) from e
 
         operations = []
 
-        # Run all refactorers
+        # Run all refactorers with individual error handling
         for refactorer in self.refactorers:
             if operation_types and refactorer.operation_type not in operation_types:
                 continue
 
-            ops = refactorer.refactor(file_path, source_code)
-            operations.extend(ops)
+            try:
+                ops = refactorer.refactor(file_path, source_code)
+                operations.extend(ops)
+            except Exception as e:
+                # Log refactorer failure but continue with other refactorers
+                logger.warning(
+                    f"Refactorer {refactorer.__class__.__name__} failed for {file_path}: {e}",
+                    exc_info=True
+                )
+                # Don't raise - allow other refactorers to run
 
         return operations
 
