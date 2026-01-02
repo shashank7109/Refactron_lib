@@ -87,7 +87,7 @@ class RefactronConfig:
     
     enable_parallel_processing: bool = True
     max_parallel_workers: Optional[int] = None
-    use_multiprocessing: bool = True
+    use_multiprocessing: bool = False  # Threading by default (more compatible)
     
     enable_memory_profiling: bool = False
     memory_optimization_threshold_mb: float = 5.0
