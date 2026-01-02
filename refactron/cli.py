@@ -201,7 +201,35 @@ def main() -> None:
     default=True,
     help="Show detailed or summary report",
 )
-def analyze(target: str, config: Optional[str], detailed: bool) -> None:
+@click.option(
+    "--log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
+    help="Set log level",
+)
+@click.option(
+    "--log-format",
+    type=click.Choice(["json", "text"], case_sensitive=False),
+    help="Set log format (json for CI/CD, text for console)",
+)
+@click.option(
+    "--metrics/--no-metrics",
+    default=None,
+    help="Enable or disable metrics collection",
+)
+@click.option(
+    "--show-metrics",
+    is_flag=True,
+    help="Show metrics summary after analysis",
+)
+def analyze(
+    target: str,
+    config: Optional[str],
+    detailed: bool,
+    log_level: Optional[str],
+    log_format: Optional[str],
+    metrics: Optional[bool],
+    show_metrics: bool,
+) -> None:
     """
     Analyze code for issues and technical debt.
 
@@ -215,6 +243,15 @@ def analyze(target: str, config: Optional[str], detailed: bool) -> None:
     # Setup
     target_path = _validate_path(target)
     cfg = _load_config(config)
+    
+    # Override config with CLI options
+    if log_level:
+        cfg.log_level = log_level
+    if log_format:
+        cfg.log_format = log_format
+    if metrics is not None:
+        cfg.enable_metrics = metrics
+    
     _print_file_count(target_path)
 
     # Run analysis
@@ -238,6 +275,17 @@ def analyze(target: str, config: Optional[str], detailed: bool) -> None:
         _print_detailed_issues(result)
 
     _print_helpful_tips(summary, detailed)
+
+    # Show metrics if requested
+    if show_metrics and cfg.enable_metrics:
+        from refactron.core.metrics import get_metrics_collector
+
+        console.print("\n[bold]📊 Metrics Summary:[/bold]")
+        collector = get_metrics_collector()
+        metrics_summary = collector.get_analysis_summary()
+        console.print(f"  Total analysis time: {metrics_summary.get('total_analysis_time_ms', 0):.2f}ms")
+        console.print(f"  Average time per file: {metrics_summary.get('average_time_per_file_ms', 0):.2f}ms")
+        console.print(f"  Success rate: {metrics_summary.get('success_rate_percent', 0):.1f}%")
 
     # Exit with error code if critical issues found
     if summary["critical"] > 0:
@@ -624,6 +672,204 @@ def rollback(
             )
     else:
         console.print(f"\n[red]❌ Rollback failed: {result['message']}[/red]")
+        raise SystemExit(1)
+
+
+@main.command()
+@click.option(
+    "--enable",
+    "action",
+    flag_value="enable",
+    help="Enable telemetry collection",
+)
+@click.option(
+    "--disable",
+    "action",
+    flag_value="disable",
+    help="Disable telemetry collection",
+)
+@click.option(
+    "--status",
+    "action",
+    flag_value="status",
+    default=True,
+    help="Show telemetry status (default)",
+)
+def telemetry(action: str) -> None:
+    """
+    Manage opt-in telemetry settings.
+
+    Telemetry helps us understand how Refactron is used in real-world scenarios
+    and improve its performance. All data is anonymous and no code or personal
+    information is collected.
+
+    Examples:
+      refactron telemetry --status   # Show current status
+      refactron telemetry --enable   # Enable telemetry
+      refactron telemetry --disable  # Disable telemetry
+    """
+    from refactron.core.telemetry import TelemetryConfig
+
+    console.print("\n📊 [bold blue]Refactron Telemetry[/bold blue]\n")
+
+    config = TelemetryConfig()
+
+    if action == "enable":
+        config.enable()
+        console.print("[green]✅ Telemetry has been enabled.[/green]")
+        console.print("\n[dim]Thank you for helping improve Refactron![/dim]")
+        console.print("[dim]Only anonymous usage statistics are collected.[/dim]")
+        console.print(f"[dim]Anonymous ID: {config.anonymous_id}[/dim]")
+    elif action == "disable":
+        config.disable()
+        console.print("[yellow]Telemetry has been disabled.[/yellow]")
+        console.print("\n[dim]You can re-enable it anytime with 'refactron telemetry --enable'[/dim]")
+    else:  # status
+        if config.enabled:
+            console.print("[green]✅ Telemetry is currently enabled[/green]")
+            console.print(f"\n[dim]Anonymous ID: {config.anonymous_id}[/dim]")
+            console.print("\n[bold]What data is collected:[/bold]")
+            console.print("  • Number of files analyzed")
+            console.print("  • Analysis execution time")
+            console.print("  • Number of issues found (not the actual issues)")
+            console.print("  • Python version and OS platform")
+            console.print("  • Refactoring operations applied")
+            console.print("\n[bold]What is NOT collected:[/bold]")
+            console.print("  • Your code or file names")
+            console.print("  • Personal information")
+            console.print("  • Specific error messages or stack traces")
+            console.print("\n[dim]Use --disable to turn off telemetry[/dim]")
+        else:
+            console.print("[yellow]Telemetry is currently disabled[/yellow]")
+            console.print("\n[dim]Use --enable to help improve Refactron[/dim]")
+
+
+@main.command()
+@click.option(
+    "--format",
+    "-f",
+    type=click.Choice(["text", "json"], case_sensitive=False),
+    default="text",
+    help="Output format",
+)
+def metrics(format: str) -> None:
+    """
+    Display collected metrics from the current session.
+
+    Shows performance metrics, analyzer hit counts, and other statistics
+    from Refactron operations.
+
+    Examples:
+      refactron metrics              # Show metrics in text format
+      refactron metrics --format json  # Show metrics in JSON format
+    """
+    import json as json_module
+
+    from refactron.core.metrics import get_metrics_collector
+
+    console.print("\n📈 [bold blue]Refactron Metrics[/bold blue]\n")
+
+    collector = get_metrics_collector()
+    summary = collector.get_combined_summary()
+
+    if format == "json":
+        console.print(json_module.dumps(summary, indent=2))
+    else:
+        # Text format
+        analysis = summary.get("analysis", {})
+        refactoring = summary.get("refactoring", {})
+
+        # Analysis metrics
+        console.print("[bold]Analysis Metrics:[/bold]")
+        console.print(f"  Files analyzed: {analysis.get('total_files_analyzed', 0)}")
+        console.print(f"  Files failed: {analysis.get('total_files_failed', 0)}")
+        console.print(f"  Issues found: {analysis.get('total_issues_found', 0)}")
+        console.print(
+            f"  Total time: {analysis.get('total_analysis_time_ms', 0):.2f}ms"
+        )
+        console.print(
+            f"  Avg time per file: {analysis.get('average_time_per_file_ms', 0):.2f}ms"
+        )
+        console.print(
+            f"  Success rate: {analysis.get('success_rate_percent', 0):.1f}%"
+        )
+
+        # Analyzer hit counts
+        analyzer_hits = analysis.get("analyzer_hit_counts", {})
+        if analyzer_hits:
+            console.print("\n[bold]Analyzer Hit Counts:[/bold]")
+            for analyzer, count in sorted(analyzer_hits.items()):
+                console.print(f"  {analyzer}: {count}")
+
+        # Refactoring metrics
+        console.print("\n[bold]Refactoring Metrics:[/bold]")
+        console.print(f"  Applied: {refactoring.get('total_refactorings_applied', 0)}")
+        console.print(f"  Failed: {refactoring.get('total_refactorings_failed', 0)}")
+        console.print(
+            f"  Total time: {refactoring.get('total_refactoring_time_ms', 0):.2f}ms"
+        )
+        console.print(
+            f"  Success rate: {refactoring.get('success_rate_percent', 0):.1f}%"
+        )
+
+        # Refactorer hit counts
+        refactorer_hits = refactoring.get("refactorer_hit_counts", {})
+        if refactorer_hits:
+            console.print("\n[bold]Refactorer Hit Counts:[/bold]")
+            for refactorer, count in sorted(refactorer_hits.items()):
+                console.print(f"  {refactorer}: {count}")
+
+
+@main.command()
+@click.option(
+    "--host",
+    default="0.0.0.0",
+    help="Host to bind Prometheus metrics server to",
+)
+@click.option(
+    "--port",
+    default=9090,
+    type=int,
+    help="Port for Prometheus metrics server",
+)
+def serve_metrics(host: str, port: int) -> None:
+    """
+    Start a Prometheus metrics HTTP server.
+
+    This command starts a persistent HTTP server that exposes Refactron metrics
+    in Prometheus format on the /metrics endpoint.
+
+    Examples:
+      refactron serve-metrics                    # Start on 0.0.0.0:9090
+      refactron serve-metrics --port 8080        # Start on port 8080
+      refactron serve-metrics --host 127.0.0.1   # Bind to localhost only
+    """
+    from refactron.core.prometheus_metrics import start_metrics_server
+
+    console.print("\n🚀 [bold blue]Starting Prometheus Metrics Server[/bold blue]\n")
+
+    try:
+        server = start_metrics_server(host=host, port=port)
+        console.print(f"[green]✅ Metrics server started on http://{host}:{port}[/green]")
+        console.print(f"\n[dim]Endpoints:[/dim]")
+        console.print(f"[dim]  • http://{host}:{port}/metrics - Prometheus metrics[/dim]")
+        console.print(f"[dim]  • http://{host}:{port}/health  - Health check[/dim]")
+        console.print("\n[yellow]Press Ctrl+C to stop the server[/yellow]")
+
+        # Keep the server running
+        try:
+            import time
+
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            console.print("\n\n[yellow]Stopping metrics server...[/yellow]")
+            from refactron.core.prometheus_metrics import stop_metrics_server
+
+            stop_metrics_server()
+            console.print("[green]✅ Metrics server stopped[/green]")
+    except Exception as e:
+        console.print(f"[red]❌ Failed to start metrics server: {e}[/red]")
         raise SystemExit(1)
 
 
