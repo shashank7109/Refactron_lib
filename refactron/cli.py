@@ -823,8 +823,8 @@ def metrics(format: str) -> None:
 @main.command()
 @click.option(
     "--host",
-    default="0.0.0.0",
-    help="Host to bind Prometheus metrics server to",
+    default="127.0.0.1",
+    help="Host to bind Prometheus metrics server to (default: 127.0.0.1 for localhost-only)",
 )
 @click.option(
     "--port",
@@ -849,7 +849,7 @@ def serve_metrics(host: str, port: int) -> None:
     console.print("\n🚀 [bold blue]Starting Prometheus Metrics Server[/bold blue]\n")
 
     try:
-        server = start_metrics_server(host=host, port=port)
+        start_metrics_server(host=host, port=port)
         console.print(f"[green]✅ Metrics server started on http://{host}:{port}[/green]")
         console.print(f"\n[dim]Endpoints:[/dim]")
         console.print(f"[dim]  • http://{host}:{port}/metrics - Prometheus metrics[/dim]")

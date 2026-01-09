@@ -131,8 +131,9 @@ metrics_detailed: true
 # When true, starts an HTTP server exposing metrics in Prometheus format
 enable_prometheus: false
 
-# Prometheus server host
-prometheus_host: "0.0.0.0"
+# Prometheus server host (default: 127.0.0.1 for localhost-only access)
+# Use "0.0.0.0" to expose to all network interfaces (security consideration)
+prometheus_host: "127.0.0.1"
 
 # Prometheus server port
 prometheus_port: 9090

@@ -4,8 +4,6 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import pytest
-
 from refactron.core.telemetry import (
     TelemetryCollector,
     TelemetryConfig,
@@ -334,6 +332,8 @@ def test_enable_disable_telemetry():
             config = TelemetryConfig()
             assert config.enabled is False
         finally:
-            # Restore original HOME
-            if original_home:
+            # Restore original HOME (or remove it if it was unset)
+            if original_home is not None:
                 os.environ["HOME"] = original_home
+            else:
+                os.environ.pop("HOME", None)

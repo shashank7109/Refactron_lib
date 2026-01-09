@@ -9,7 +9,7 @@ This module provides execution metrics tracking including:
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
@@ -23,7 +23,7 @@ class FileMetric:
     lines_of_code: int
     issues_found: int
     analyzers_run: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"))
     success: bool = True
     error_message: Optional[str] = None
 
@@ -37,7 +37,7 @@ class RefactoringMetric:
     execution_time_ms: float
     success: bool
     risk_level: str
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"))
     error_message: Optional[str] = None
 
 
@@ -258,7 +258,7 @@ class MetricsCollector:
             Dictionary containing all metrics summaries
         """
         return {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "analysis": self.get_analysis_summary(),
             "refactoring": self.get_refactoring_summary(),
         }

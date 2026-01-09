@@ -24,7 +24,7 @@ from refactron.core.memory_profiler import MemoryProfiler
 from refactron.core.metrics import get_metrics_collector
 from refactron.core.models import FileMetrics
 from refactron.core.parallel import ParallelProcessor
-from refactron.core.prometheus_metrics import start_metrics_server, stop_metrics_server
+from refactron.core.prometheus_metrics import start_metrics_server
 from refactron.core.refactor_result import RefactorResult
 from refactron.core.telemetry import get_telemetry_collector
 from refactron.refactorers.add_docstring_refactorer import AddDocstringRefactorer
@@ -59,17 +59,16 @@ class Refactron:
         self.analyzers: List[BaseAnalyzer] = []
         self.refactorers: List[BaseRefactorer] = []
 
-        # Initialize structured logging
-        if self.config.log_level is not None or self.config.log_format is not None:
-            self.structured_logger = setup_logging(
-                level=self.config.log_level,
-                log_file=self.config.log_file,
-                log_format=self.config.log_format,
-                max_bytes=self.config.log_max_bytes,
-                backup_count=self.config.log_backup_count,
-                enable_console=self.config.enable_console_logging,
-                enable_file=self.config.enable_file_logging,
-            )
+        # Initialize structured logging using the configured settings
+        self.structured_logger = setup_logging(
+            level=self.config.log_level,
+            log_file=self.config.log_file,
+            log_format=self.config.log_format,
+            max_bytes=self.config.log_max_bytes,
+            backup_count=self.config.log_backup_count,
+            enable_console=self.config.enable_console_logging,
+            enable_file=self.config.enable_file_logging,
+        )
 
         # Initialize metrics collection
         if self.config.enable_metrics:
@@ -400,6 +399,7 @@ class Refactron:
                 analyzers_run.append(analyzer.name)
                 
                 # Track analyzer hits for each issue
+                # Note: Issues are expected to have a 'category' attribute for type tracking
                 if self.metrics_collector:
                     for issue in issues:
                         issue_type = getattr(issue, 'category', 'unknown')

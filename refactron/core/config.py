@@ -110,7 +110,7 @@ class RefactronConfig:
 
     # Prometheus settings
     enable_prometheus: bool = False
-    prometheus_host: str = "0.0.0.0"
+    prometheus_host: str = "127.0.0.1"
     prometheus_port: int = 9090
 
     # Telemetry settings

@@ -165,11 +165,11 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
 class PrometheusMetricsServer:
     """HTTP server for exposing Prometheus metrics."""
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 9090) -> None:
+    def __init__(self, host: str = "127.0.0.1", port: int = 9090) -> None:
         """Initialize Prometheus metrics server.
 
         Args:
-            host: Host to bind to
+            host: Host to bind to (default: 127.0.0.1 for localhost-only access)
             port: Port to listen on
         """
         self.host = host
@@ -207,11 +207,11 @@ _global_metrics_server: Optional[PrometheusMetricsServer] = None
 _server_lock = threading.Lock()
 
 
-def start_metrics_server(host: str = "0.0.0.0", port: int = 9090) -> PrometheusMetricsServer:
+def start_metrics_server(host: str = "127.0.0.1", port: int = 9090) -> PrometheusMetricsServer:
     """Start the global Prometheus metrics server.
 
     Args:
-        host: Host to bind to
+        host: Host to bind to (default: 127.0.0.1 for localhost-only access)
         port: Port to listen on
 
     Returns:

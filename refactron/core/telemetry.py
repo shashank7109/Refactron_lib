@@ -11,7 +11,7 @@ import platform
 import sys
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -21,7 +21,7 @@ class TelemetryEvent:
     """Represents a single telemetry event."""
 
     event_type: str
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"))
     session_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     data: Dict[str, Any] = field(default_factory=dict)
 
@@ -62,9 +62,9 @@ class TelemetryCollector:
         Returns:
             Anonymous identifier string
         """
-        # Create a hash based on machine characteristics
+        # Create a hash based on hardware characteristics only (no hostname)
         # This is anonymous but consistent for the same machine
-        machine_info = f"{platform.node()}{platform.machine()}{platform.processor()}"
+        machine_info = f"{platform.machine()}{platform.processor()}{sys.platform}"
         return hashlib.sha256(machine_info.encode()).hexdigest()[:16]
 
     def record_event(
@@ -292,8 +292,8 @@ class TelemetryConfig:
         if anonymous_id:
             self.anonymous_id = anonymous_id
         elif not self.anonymous_id:
-            # Generate new anonymous ID
-            machine_info = f"{platform.node()}{platform.machine()}{platform.processor()}"
+            # Generate new anonymous ID without using host-identifying data
+            machine_info = f"{platform.machine()}{platform.processor()}{sys.platform}"
             self.anonymous_id = hashlib.sha256(machine_info.encode()).hexdigest()[:16]
         self.save_config()
 
