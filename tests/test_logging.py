@@ -5,11 +5,7 @@ import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from refactron.core.logging_config import (
-    JSONFormatter,
-    StructuredLogger,
-    setup_logging,
-)
+from refactron.core.logging_config import JSONFormatter, StructuredLogger, setup_logging
 
 
 class TestJSONFormatter:

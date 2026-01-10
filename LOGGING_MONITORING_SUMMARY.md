@@ -1,8 +1,8 @@
 # Logging & Monitoring Implementation Summary
 
-**Issue:** 3.2 Logging & Monitoring  
-**Branch:** copilot/add-structured-logging-monitoring  
-**Status:** ✅ Complete  
+**Issue:** 3.2 Logging & Monitoring
+**Branch:** copilot/add-structured-logging-monitoring
+**Status:** ✅ Complete
 **Date:** 2026-01-02
 
 ## Overview
@@ -24,7 +24,7 @@ Successfully implemented a comprehensive logging and monitoring system for Refac
   - Total issues found
   - Analysis time per file and total run time
   - Success rate percentage
-  
+
 - **Refactoring Metrics**:
   - Refactorings applied and failed
   - Execution time per operation

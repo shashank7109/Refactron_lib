@@ -56,11 +56,13 @@ class PrometheusMetrics:
         lines.append("")
 
         lines.append(
-            "# HELP refactron_avg_analysis_time_per_file_ms Average analysis time per file in milliseconds"
+            "# HELP refactron_avg_analysis_time_per_file_ms "
+            "Average analysis time per file in milliseconds"
         )
         lines.append("# TYPE refactron_avg_analysis_time_per_file_ms gauge")
         lines.append(
-            f"refactron_avg_analysis_time_per_file_ms {analysis.get('average_time_per_file_ms', 0)}"
+            f"refactron_avg_analysis_time_per_file_ms "
+            f"{analysis.get('average_time_per_file_ms', 0)}"
         )
         lines.append("")
 
@@ -99,7 +101,8 @@ class PrometheusMetrics:
         )
         lines.append("# TYPE refactron_refactorings_applied_total counter")
         lines.append(
-            f"refactron_refactorings_applied_total {refactoring.get('total_refactorings_applied', 0)}"
+            f"refactron_refactorings_applied_total "
+            f"{refactoring.get('total_refactorings_applied', 0)}"
         )
         lines.append("")
 
@@ -122,11 +125,13 @@ class PrometheusMetrics:
         lines.append("")
 
         lines.append(
-            "# HELP refactron_avg_refactoring_time_per_operation_ms Average refactoring time per operation in milliseconds"
+            "# HELP refactron_avg_refactoring_time_per_operation_ms "
+            "Average refactoring time per operation in milliseconds"
         )
         lines.append("# TYPE refactron_avg_refactoring_time_per_operation_ms gauge")
         lines.append(
-            f"refactron_avg_refactoring_time_per_operation_ms {refactoring.get('average_time_per_operation_ms', 0)}"
+            f"refactron_avg_refactoring_time_per_operation_ms "
+            f"{refactoring.get('average_time_per_operation_ms', 0)}"
         )
         lines.append("")
 

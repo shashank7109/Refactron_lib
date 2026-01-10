@@ -89,7 +89,11 @@ class TelemetryCollector:
         event_data.update(
             {
                 "anonymous_id": self.anonymous_id,
-                "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+                "python_version": (
+                    f"{sys.version_info.major}."
+                    f"{sys.version_info.minor}."
+                    f"{sys.version_info.micro}"
+                ),
                 "platform": platform.system(),
                 "platform_version": platform.release(),
             }
