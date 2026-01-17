@@ -6,12 +6,18 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
+from refactron.core.config_loader import ConfigLoader
+from refactron.core.config_validator import ConfigValidator
 from refactron.core.exceptions import ConfigError
 
 
 @dataclass
 class RefactronConfig:
     """Configuration for Refactron analysis and refactoring."""
+
+    # Configuration metadata
+    version: str = field(default_factory=lambda: ConfigValidator.CURRENT_VERSION)
+    environment: Optional[str] = None  # dev, staging, prod
 
     # Analysis settings
     enabled_analyzers: List[str] = field(
@@ -118,11 +124,18 @@ class RefactronConfig:
     telemetry_endpoint: Optional[str] = None  # For future remote submission
 
     @classmethod
-    def from_file(cls, config_path: Path) -> "RefactronConfig":
-        """Load configuration from a YAML file.
+    def from_file(
+        cls,
+        config_path: Path,
+        profile: Optional[str] = None,
+        environment: Optional[str] = None,
+    ) -> "RefactronConfig":
+        """Load configuration from a YAML file with profile and environment support.
 
         Args:
             config_path: Path to the YAML configuration file
+            profile: Profile name to use (dev, staging, prod). Overridden by environment.
+            environment: Environment name (dev, staging, prod). Takes precedence over profile.
 
         Returns:
             RefactronConfig instance with loaded settings
@@ -130,25 +143,14 @@ class RefactronConfig:
         Raises:
             ConfigError: If config file cannot be loaded or parsed
         """
-        if not config_path.exists():
-            raise ConfigError(
-                f"Configuration file not found: {config_path}",
-                config_path=config_path,
-            )
+        # Use enhanced config loader with profile and environment support
+        config_dict = ConfigLoader.load_from_file(config_path, profile, environment)
 
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                config_dict = yaml.safe_load(f) or {}
-        except yaml.YAMLError as e:
-            raise ConfigError(
-                f"Invalid YAML syntax in configuration file: {e}",
-                config_path=config_path,
-            ) from e
-        except (IOError, OSError) as e:
-            raise ConfigError(
-                f"Failed to read configuration file: {e}",
-                config_path=config_path,
-            ) from e
+        # Convert path strings to Path objects
+        path_fields = ["ast_cache_dir", "incremental_state_file", "log_file"]
+        for field in path_fields:
+            if field in config_dict and config_dict[field] and isinstance(config_dict[field], str):
+                config_dict[field] = Path(config_dict[field])
 
         try:
             return cls(**config_dict)
@@ -156,6 +158,10 @@ class RefactronConfig:
             raise ConfigError(
                 f"Invalid configuration options: {e}",
                 config_path=config_path,
+                recovery_suggestion=(
+                    "Check that all configuration fields match the expected types. "
+                    "Run 'refactron init' to generate a valid template."
+                ),
             ) from e
 
     def to_file(self, config_path: Path) -> None:
@@ -168,6 +174,8 @@ class RefactronConfig:
             ConfigError: If config file cannot be written
         """
         config_dict = {
+            "version": self.version,
+            "environment": self.environment,
             "enabled_analyzers": self.enabled_analyzers,
             "enabled_refactorers": self.enabled_refactorers,
             "max_function_complexity": self.max_function_complexity,

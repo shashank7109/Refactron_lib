@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
+import yaml
 from rich.console import Console
 from rich.table import Table
 
@@ -29,12 +30,19 @@ def _setup_logging(verbose: bool = False) -> None:
     )
 
 
-def _load_config(config_path: Optional[str]) -> RefactronConfig:
+def _load_config(
+    config_path: Optional[str],
+    profile: Optional[str] = None,
+    environment: Optional[str] = None,
+) -> RefactronConfig:
     """Load configuration from file or use default."""
     try:
         if config_path:
             console.print(f"[dim]📄 Loading config from: {config_path}[/dim]")
-            return RefactronConfig.from_file(Path(config_path))
+            if profile or environment:
+                env_display = environment or profile
+                console.print(f"[dim]🎯 Using profile/environment: {env_display}[/dim]")
+            return RefactronConfig.from_file(Path(config_path), profile, environment)
         return RefactronConfig.default()
     except ConfigError as e:
         console.print(f"[red]❌ Configuration Error: {e}[/red]")
@@ -79,6 +87,54 @@ def _create_summary_table(summary: dict) -> Table:
     table.add_row("ℹ️  Info", str(summary["info"]))
 
     return table
+
+
+def _detect_project_type() -> Optional[str]:
+    """
+    Detect project type by checking for framework-specific files and imports.
+
+    Detection patterns:
+    - Django: Checks for settings.py or manage.py files with Django-specific imports/variables
+    - FastAPI: Looks for 'from fastapi import' or 'import fastapi' in common entry points
+    - Flask: Looks for 'from flask import' with Flask app instantiation patterns
+
+    Returns:
+        Detected framework name ('django', 'fastapi', 'flask') or None
+    """
+    current_dir = Path.cwd()
+
+    # Check for Django first (manage.py or settings.py are strong signals)
+    for django_file in ["manage.py", "**/settings.py"]:
+        for file_path in current_dir.glob(django_file):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    # Read line by line to avoid loading large files
+                    for line in f:
+                        if "django" in line.lower() or "DJANGO_SETTINGS_MODULE" in line:
+                            return "django"
+            except (IOError, OSError):
+                pass
+
+    # Check common entry point files for FastAPI and Flask
+    common_entry_points = ["main.py", "app.py", "application.py", "server.py", "api.py"]
+    for entry_point in common_entry_points:
+        for file_path in current_dir.glob(entry_point):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                    # Check for FastAPI
+                    if "from fastapi import" in content or "import fastapi" in content:
+                        return "fastapi"
+
+                    # Check for Flask
+                    if "from flask import" in content or "import flask" in content:
+                        if "Flask(__name__)" in content or "app = Flask" in content:
+                            return "flask"
+            except (IOError, OSError):
+                pass
+
+    return None
 
 
 def _print_status_messages(summary: dict) -> None:
@@ -221,6 +277,27 @@ def main() -> None:
     is_flag=True,
     help="Show metrics summary after analysis",
 )
+@click.option(
+    "--profile",
+    "-p",
+    type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
+    help=(
+        "Named configuration profile to use (dev, staging, prod). "
+        "Profiles typically group config defaults; if both --profile and "
+        "--environment are set, the environment determines the final "
+        "effective configuration."
+    ),
+)
+@click.option(
+    "--environment",
+    "-e",
+    type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
+    help=(
+        "Target runtime environment (dev, staging, prod). When both "
+        "--profile and --environment are provided, the environment "
+        "overrides the selected profile."
+    ),
+)
 def analyze(
     target: str,
     config: Optional[str],
@@ -229,6 +306,8 @@ def analyze(
     log_format: Optional[str],
     metrics: Optional[bool],
     show_metrics: bool,
+    profile: Optional[str],
+    environment: Optional[str],
 ) -> None:
     """
     Analyze code for issues and technical debt.
@@ -242,7 +321,7 @@ def analyze(
 
     # Setup
     target_path = _validate_path(target)
-    cfg = _load_config(config)
+    cfg = _load_config(config, profile, environment)
 
     # Override config with CLI options
     if log_level:
@@ -305,6 +384,27 @@ def analyze(
     help="Path to configuration file",
 )
 @click.option(
+    "--profile",
+    "-p",
+    type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
+    help=(
+        "Named configuration profile to use (dev, staging, prod). "
+        "Profiles typically group config defaults; if both --profile and "
+        "--environment are set, the environment determines the final "
+        "effective configuration."
+    ),
+)
+@click.option(
+    "--environment",
+    "-e",
+    type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
+    help=(
+        "Target runtime environment (dev, staging, prod). When both "
+        "--profile and --environment are provided, the environment "
+        "overrides the selected profile."
+    ),
+)
+@click.option(
     "--preview/--apply",
     default=True,
     help="Preview changes or apply them",
@@ -318,6 +418,8 @@ def analyze(
 def refactor(
     target: str,
     config: Optional[str],
+    profile: Optional[str],
+    environment: Optional[str],
     preview: bool,
     types: tuple,
 ) -> None:
@@ -333,7 +435,7 @@ def refactor(
 
     # Setup
     target_path = _validate_path(target)
-    cfg = _load_config(config)
+    cfg = _load_config(config, profile, environment)
     _print_refactor_filters(types)
     _confirm_apply_mode(preview)
 
@@ -400,6 +502,24 @@ def refactor(
 @main.command()
 @click.argument("target", type=click.Path(exists=True))
 @click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Path to configuration file",
+)
+@click.option(
+    "--profile",
+    "-p",
+    type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
+    help="Configuration profile to use (dev, staging, prod)",
+)
+@click.option(
+    "--environment",
+    "-e",
+    type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
+    help="Environment to use (overrides profile)",
+)
+@click.option(
     "--format",
     "-f",
     type=click.Choice(["text", "json", "html"]),
@@ -412,7 +532,14 @@ def refactor(
     type=click.Path(),
     help="Output file path",
 )
-def report(target: str, format: str, output: Optional[str]) -> None:
+def report(
+    target: str,
+    config: Optional[str],
+    profile: Optional[str],
+    environment: Optional[str],
+    format: str,
+    output: Optional[str],
+) -> None:
     """
     Generate a detailed technical debt report.
 
@@ -427,7 +554,7 @@ def report(target: str, format: str, output: Optional[str]) -> None:
         console.print(f"[red]❌ Error: Path does not exist: {target}[/red]")
         raise SystemExit(1)
 
-    cfg = RefactronConfig.default()
+    cfg = _load_config(config, profile, environment)
     cfg.report_format = format
 
     console.print(f"[dim]📝 Format: {format.upper()}[/dim]")
@@ -460,6 +587,33 @@ def report(target: str, format: str, output: Optional[str]) -> None:
 @main.command()
 @click.argument("target", type=click.Path(exists=True))
 @click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Path to configuration file",
+)
+@click.option(
+    "--profile",
+    "-p",
+    type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
+    help=(
+        "Named configuration profile to use (dev, staging, prod). "
+        "Profiles typically group config defaults; if both --profile and "
+        "--environment are set, the environment determines the final "
+        "effective configuration."
+    ),
+)
+@click.option(
+    "--environment",
+    "-e",
+    type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
+    help=(
+        "Target runtime environment (dev, staging, prod). When both "
+        "--profile and --environment are provided, the environment "
+        "overrides the selected profile."
+    ),
+)
+@click.option(
     "--preview/--apply",
     default=True,
     help="Preview fixes or apply them",
@@ -473,6 +627,9 @@ def report(target: str, format: str, output: Optional[str]) -> None:
 )
 def autofix(
     target: str,
+    config: Optional[str],
+    profile: Optional[str],
+    environment: Optional[str],
     preview: bool,
     safety_level: str,
 ) -> None:
@@ -489,6 +646,7 @@ def autofix(
 
     # Setup
     target_path = _validate_path(target)
+    _load_config(config, profile, environment)
     _print_file_count(target_path)
 
     # Map safety level
@@ -528,8 +686,17 @@ def autofix(
 
 
 @main.command()
-def init() -> None:
+@click.option(
+    "--template",
+    "-t",
+    type=click.Choice(["base", "django", "fastapi", "flask"], case_sensitive=False),
+    default="base",
+    help="Configuration template to use (base, django, fastapi, flask)",
+)
+def init(template: str) -> None:
     """Initialize Refactron configuration in the current directory."""
+    from refactron.core.config_templates import ConfigTemplates
+
     config_path = Path(".refactron.yaml")
 
     if config_path.exists():
@@ -537,11 +704,39 @@ def init() -> None:
         if not click.confirm("Overwrite?"):
             return
 
-    cfg = RefactronConfig.default()
-    cfg.to_file(config_path)
+    # Detect project type and suggest appropriate template
+    detected_type = _detect_project_type()
+    if detected_type and detected_type != template:
+        console.print(f"[yellow]💡 Detected {detected_type} project[/yellow]")
+        if template == "base":
+            console.print(
+                f"[yellow]   Consider using --template {detected_type} for "
+                f"framework-specific settings[/yellow]"
+            )
+        else:
+            console.print(
+                f"[yellow]   Note: Using {template} template, but detected {detected_type}[/yellow]"
+            )
 
-    console.print(f"✅ Created configuration file: {config_path}")
-    console.print("\n[dim]Edit this file to customize Refactron behavior.[/dim]")
+    try:
+        template_dict = ConfigTemplates.get_template(template)
+
+        with open(config_path, "w", encoding="utf-8") as f:
+            yaml.dump(template_dict, f, default_flow_style=False, sort_keys=False)
+
+        console.print(f"✅ Created configuration file: {config_path}")
+        console.print(f"[dim]📋 Using template: {template}[/dim]")
+        if template != "base":
+            console.print(
+                f"[dim]💡 Template includes framework-specific settings for {template}[/dim]"
+            )
+        console.print("\n[dim]Edit this file to customize Refactron behavior.[/dim]")
+        console.print(
+            "[dim]💡 Use --profile or --environment options to switch between dev/staging/prod[/dim]"
+        )
+    except ValueError as e:
+        console.print(f"[red]❌ Error: {e}[/red]")
+        raise SystemExit(1)
 
 
 @main.command()
