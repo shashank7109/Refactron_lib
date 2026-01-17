@@ -143,9 +143,7 @@ class TestConfigLoader:
             config_path = Path(f.name)
 
         try:
-            loaded = ConfigLoader.load_from_file(
-                config_path, profile="dev", environment="prod"
-            )
+            loaded = ConfigLoader.load_from_file(config_path, profile="dev", environment="prod")
             assert loaded["log_level"] == "WARNING"  # Environment takes precedence
             assert loaded["environment"] == "prod"
         finally:
@@ -294,9 +292,7 @@ class TestRefactronConfigEnhanced:
             config_path = Path(f.name)
 
         try:
-            loaded_config = RefactronConfig.from_file(
-                config_path, environment="prod"
-            )
+            loaded_config = RefactronConfig.from_file(config_path, environment="prod")
             assert loaded_config.log_level == "WARNING"
             assert loaded_config.environment == "prod"
         finally:
@@ -386,4 +382,3 @@ class TestConfigErrorMessages:
             assert error.recovery_suggestion is not None
         finally:
             config_path.unlink()
-

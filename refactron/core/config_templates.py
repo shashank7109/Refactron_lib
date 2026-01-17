@@ -208,4 +208,3 @@ class ConfigTemplates:
                 f"Unsupported framework '{framework}'. "
                 f"Supported frameworks: django, fastapi, flask, base"
             )
-

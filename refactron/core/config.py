@@ -149,9 +149,7 @@ class RefactronConfig:
         # Convert path strings to Path objects
         path_fields = ["ast_cache_dir", "incremental_state_file", "log_file"]
         for field in path_fields:
-            if field in config_dict and config_dict[field] and isinstance(
-                config_dict[field], str
-            ):
+            if field in config_dict and config_dict[field] and isinstance(config_dict[field], str):
                 config_dict[field] = Path(config_dict[field])
 
         try:

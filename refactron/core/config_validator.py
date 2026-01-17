@@ -45,9 +45,7 @@ class ConfigValidator:
     VALID_ENVIRONMENTS = {"dev", "staging", "prod", "development", "production"}
 
     @classmethod
-    def validate(
-        cls, config_dict: Dict[str, Any], config_path: Optional[Path] = None
-    ) -> List[str]:
+    def validate(cls, config_dict: Dict[str, Any], config_path: Optional[Path] = None) -> List[str]:
         """
         Validate configuration dictionary against schema.
 
@@ -72,10 +70,10 @@ class ConfigValidator:
                 f"Current version: {cls.CURRENT_VERSION}"
             )
 
-        # Validate environment if present
+        # Validate environment if present (None is allowed)
         if "environment" in config_dict:
             env = config_dict["environment"]
-            if env not in cls.VALID_ENVIRONMENTS:
+            if env is not None and env not in cls.VALID_ENVIRONMENTS:
                 errors.append(
                     f"Invalid environment '{env}'. "
                     f"Valid environments: {', '.join(sorted(cls.VALID_ENVIRONMENTS))}"
@@ -109,21 +107,24 @@ class ConfigValidator:
 
         # Validate numeric thresholds
         numeric_fields = {
-            "max_function_complexity": (int, 1, 100),
-            "max_function_length": (int, 1, 1000),
-            "max_file_length": (int, 1, 10000),
-            "max_parameters": (int, 1, 50),
-            "max_ast_cache_size_mb": (int, 1, 10000),
-            "max_parallel_workers": (int, 1, 128),
-            "log_max_bytes": (int, 1024, None),  # At least 1KB
-            "log_backup_count": (int, 1, 100),
-            "prometheus_port": (int, 1, 65535),
+            "max_function_complexity": (int, 1, 100, False),  # allow_none
+            "max_function_length": (int, 1, 1000, False),
+            "max_file_length": (int, 1, 10000, False),
+            "max_parameters": (int, 1, 50, False),
+            "max_ast_cache_size_mb": (int, 1, 10000, False),
+            "max_parallel_workers": (int, 1, 128, True),  # None means use system default
+            "log_max_bytes": (int, 1024, None, False),  # At least 1KB
+            "log_backup_count": (int, 1, 100, False),
+            "prometheus_port": (int, 1, 65535, False),
         }
 
-        for field, (field_type, min_val, max_val) in numeric_fields.items():
+        for field, (field_type, min_val, max_val, allow_none) in numeric_fields.items():
             if field in config_dict:
                 value = config_dict[field]
-                if not isinstance(value, field_type):
+                if value is None:
+                    if not allow_none:
+                        errors.append(f"'{field}' cannot be None")
+                elif not isinstance(value, field_type):
                     errors.append(
                         f"'{field}' must be {field_type.__name__}, got {type(value).__name__}"
                     )
@@ -145,9 +146,7 @@ class ConfigValidator:
             if field in config_dict:
                 value = config_dict[field]
                 if not isinstance(value, (int, float)):
-                    errors.append(
-                        f"'{field}' must be a number, got {type(value).__name__}"
-                    )
+                    errors.append(f"'{field}' must be a number, got {type(value).__name__}")
                 elif min_val is not None and value < min_val:
                     errors.append(f"'{field}' must be >= {min_val}, got {value}")
                 elif max_val is not None and value > max_val:
@@ -175,9 +174,7 @@ class ConfigValidator:
             if field in config_dict:
                 value = config_dict[field]
                 if not isinstance(value, bool):
-                    errors.append(
-                        f"'{field}' must be a boolean, got {type(value).__name__}"
-                    )
+                    errors.append(f"'{field}' must be a boolean, got {type(value).__name__}")
 
         # Validate string fields with specific values
         if "log_level" in config_dict:
@@ -191,9 +188,7 @@ class ConfigValidator:
         if "log_format" in config_dict:
             log_format = config_dict["log_format"]
             if log_format not in {"json", "text"}:
-                errors.append(
-                    f"Invalid log_format '{log_format}'. Valid formats: json, text"
-                )
+                errors.append(f"Invalid log_format '{log_format}'. Valid formats: json, text")
 
         if "report_format" in config_dict:
             report_format = config_dict["report_format"]
@@ -288,4 +283,3 @@ class ConfigValidator:
                     "or manually update the 'version' field in your config."
                 ),
             )
-

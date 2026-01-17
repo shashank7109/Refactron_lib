@@ -224,4 +224,3 @@ class ConfigLoader:
         migrated["version"] = to_version
 
         return migrated
-

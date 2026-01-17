@@ -115,4 +115,3 @@ class TestConfigLoaderEdgeCases:
             assert result["version"] == "1.0"
         finally:
             config_path.unlink()
-
