@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
+import yaml
 from rich.console import Console
 from rich.table import Table
 
@@ -86,6 +87,54 @@ def _create_summary_table(summary: dict) -> Table:
     table.add_row("ℹ️  Info", str(summary["info"]))
 
     return table
+
+
+def _detect_project_type() -> Optional[str]:
+    """
+    Detect project type by checking for framework-specific files and imports.
+    
+    Detection patterns:
+    - Django: Checks for settings.py or manage.py files with Django-specific imports/variables
+    - FastAPI: Looks for 'from fastapi import' or 'import fastapi' in common entry points
+    - Flask: Looks for 'from flask import' with Flask app instantiation patterns
+    
+    Returns:
+        Detected framework name ('django', 'fastapi', 'flask') or None
+    """
+    current_dir = Path.cwd()
+    
+    # Check for Django first (manage.py or settings.py are strong signals)
+    for django_file in ["manage.py", "**/settings.py"]:
+        for file_path in current_dir.glob(django_file):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    # Read line by line to avoid loading large files
+                    for line in f:
+                        if "django" in line.lower() or "DJANGO_SETTINGS_MODULE" in line:
+                            return "django"
+            except (IOError, OSError):
+                pass
+    
+    # Check common entry point files for FastAPI and Flask
+    common_entry_points = ["main.py", "app.py", "application.py", "server.py", "api.py"]
+    for entry_point in common_entry_points:
+        for file_path in current_dir.glob(entry_point):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    
+                    # Check for FastAPI
+                    if "from fastapi import" in content or "import fastapi" in content:
+                        return "fastapi"
+                    
+                    # Check for Flask
+                    if "from flask import" in content or "import flask" in content:
+                        if "Flask(__name__)" in content or "app = Flask" in content:
+                            return "flask"
+            except (IOError, OSError):
+                pass
+    
+    return None
 
 
 def _print_status_messages(summary: dict) -> None:
@@ -232,13 +281,22 @@ def main() -> None:
     "--profile",
     "-p",
     type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
-    help="Configuration profile to use (dev, staging, prod)",
+    help=(
+        "Named configuration profile to use (dev, staging, prod). "
+        "Profiles typically group config defaults; if both --profile and "
+        "--environment are set, the environment determines the final "
+        "effective configuration."
+    ),
 )
 @click.option(
     "--environment",
     "-e",
     type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
-    help="Environment to use (overrides profile)",
+    help=(
+        "Target runtime environment (dev, staging, prod). When both "
+        "--profile and --environment are provided, the environment "
+        "overrides the selected profile."
+    ),
 )
 def analyze(
     target: str,
@@ -329,13 +387,22 @@ def analyze(
     "--profile",
     "-p",
     type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
-    help="Configuration profile to use (dev, staging, prod)",
+    help=(
+        "Named configuration profile to use (dev, staging, prod). "
+        "Profiles typically group config defaults; if both --profile and "
+        "--environment are set, the environment determines the final "
+        "effective configuration."
+    ),
 )
 @click.option(
     "--environment",
     "-e",
     type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
-    help="Environment to use (overrides profile)",
+    help=(
+        "Target runtime environment (dev, staging, prod). When both "
+        "--profile and --environment are provided, the environment "
+        "overrides the selected profile."
+    ),
 )
 @click.option(
     "--preview/--apply",
@@ -529,13 +596,22 @@ def report(
     "--profile",
     "-p",
     type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
-    help="Configuration profile to use (dev, staging, prod)",
+    help=(
+        "Named configuration profile to use (dev, staging, prod). "
+        "Profiles typically group config defaults; if both --profile and "
+        "--environment are set, the environment determines the final "
+        "effective configuration."
+    ),
 )
 @click.option(
     "--environment",
     "-e",
     type=click.Choice(["dev", "staging", "prod"], case_sensitive=False),
-    help="Environment to use (overrides profile)",
+    help=(
+        "Target runtime environment (dev, staging, prod). When both "
+        "--profile and --environment are provided, the environment "
+        "overrides the selected profile."
+    ),
 )
 @click.option(
     "--preview/--apply",
@@ -570,7 +646,7 @@ def autofix(
 
     # Setup
     target_path = _validate_path(target)
-    cfg = _load_config(config, profile, environment)
+    _load_config(config, profile, environment)
     _print_file_count(target_path)
 
     # Map safety level
@@ -628,9 +704,22 @@ def init(template: str) -> None:
         if not click.confirm("Overwrite?"):
             return
 
+    # Detect project type and suggest appropriate template
+    detected_type = _detect_project_type()
+    if detected_type and detected_type != template:
+        console.print(f"[yellow]💡 Detected {detected_type} project[/yellow]")
+        if template == "base":
+            console.print(
+                f"[yellow]   Consider using --template {detected_type} for "
+                f"framework-specific settings[/yellow]"
+            )
+        else:
+            console.print(
+                f"[yellow]   Note: Using {template} template, but detected {detected_type}[/yellow]"
+            )
+
     try:
         template_dict = ConfigTemplates.get_template(template)
-        import yaml
 
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(template_dict, f, default_flow_style=False, sort_keys=False)
