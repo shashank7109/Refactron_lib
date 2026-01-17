@@ -92,17 +92,17 @@ def _create_summary_table(summary: dict) -> Table:
 def _detect_project_type() -> Optional[str]:
     """
     Detect project type by checking for framework-specific files and imports.
-    
+
     Detection patterns:
     - Django: Checks for settings.py or manage.py files with Django-specific imports/variables
     - FastAPI: Looks for 'from fastapi import' or 'import fastapi' in common entry points
     - Flask: Looks for 'from flask import' with Flask app instantiation patterns
-    
+
     Returns:
         Detected framework name ('django', 'fastapi', 'flask') or None
     """
     current_dir = Path.cwd()
-    
+
     # Check for Django first (manage.py or settings.py are strong signals)
     for django_file in ["manage.py", "**/settings.py"]:
         for file_path in current_dir.glob(django_file):
@@ -114,7 +114,7 @@ def _detect_project_type() -> Optional[str]:
                             return "django"
             except (IOError, OSError):
                 pass
-    
+
     # Check common entry point files for FastAPI and Flask
     common_entry_points = ["main.py", "app.py", "application.py", "server.py", "api.py"]
     for entry_point in common_entry_points:
@@ -122,18 +122,18 @@ def _detect_project_type() -> Optional[str]:
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
-                    
+
                     # Check for FastAPI
                     if "from fastapi import" in content or "import fastapi" in content:
                         return "fastapi"
-                    
+
                     # Check for Flask
                     if "from flask import" in content or "import flask" in content:
                         if "Flask(__name__)" in content or "app = Flask" in content:
                             return "flask"
             except (IOError, OSError):
                 pass
-    
+
     return None
 
 
