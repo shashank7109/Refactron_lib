@@ -1,7 +1,7 @@
 """Configuration schema validation for Refactron."""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from refactron.core.exceptions import ConfigError
 
@@ -242,7 +242,7 @@ class ConfigValidator:
         # If errors found, raise ConfigError with actionable messages
         if errors:
             error_msg = "Configuration validation failed:\n" + "\n".join(
-                f"  • {error}" for error in errors
+                f"  - {error}" for error in errors
             )
             recovery = (
                 "Review the error messages above and correct the configuration. "

@@ -2,7 +2,7 @@
 
 import copy
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import yaml
 
@@ -62,7 +62,10 @@ class ConfigLoader:
             raise ConfigError(
                 f"Invalid YAML syntax in configuration file: {e}",
                 config_path=config_path,
-                recovery_suggestion="Check the YAML syntax in your configuration file",
+                recovery_suggestion=(
+                    "Check the YAML syntax in your configuration file, "
+                    "including indentation, missing colons, and unclosed brackets"
+                ),
             ) from e
         except (IOError, OSError) as e:
             raise ConfigError(
@@ -75,20 +78,20 @@ class ConfigLoader:
 
         # Start with base configuration
         base_config = config_data.get("base")
-        if base_config is None:
-            # If "base" key doesn't exist or is explicitly null, treat entire config as base
-            if "base" not in config_data:
-                # No "base" key - use entire config as base
-                base_config = {k: v for k, v in config_data.items() if k != "profiles"}
-            else:
-                # "base" key exists but is null - use empty dict
+        if "base" not in config_data:
+            # No "base" key - use entire config (excluding profiles) as base
+            base_config = {k: v for k, v in config_data.items() if k != "profiles"}
+        else:
+            # "base" key exists
+            if base_config is None:
+                # Explicit null - use empty dict
                 base_config = {}
-        elif not isinstance(base_config, dict):
-            raise ConfigError(
-                "'base' must be a dictionary or null",
-                config_path=config_path,
-                config_key="base",
-            )
+            elif not isinstance(base_config, dict):
+                raise ConfigError(
+                    "'base' must be a dictionary when provided; use null or omit 'base' to use top-level keys as base configuration",
+                    config_path=config_path,
+                    config_key="base",
+                )
 
         # Merge profile-specific configuration
         final_config = copy.deepcopy(base_config)
@@ -135,14 +138,14 @@ class ConfigLoader:
         Deep merge two configuration dictionaries.
 
         Args:
-            base: Base configuration (must be a dict, not None)
+            base: Base configuration (dict or None; None is treated as an empty dict)
             override: Override configuration
 
         Returns:
             Merged configuration
 
         Raises:
-            ValueError: If base is not a dict
+            ValueError: If base is not a dict or None
         """
         # Ensure base is a dict (defensive programming)
         if base is None:
