@@ -1220,9 +1220,7 @@ def generate_cicd(
         console.print("[dim]  1. Review and customize the generated templates[/dim]")
         console.print("[dim]  2. For GitHub Actions: Workflows are in .github/workflows/[/dim]")
         console.print("[dim]  3. For GitLab CI: Merge into your .gitlab-ci.yml[/dim]")
-        console.print(
-            "[dim]  4. For pre-commit: Install with 'pre-commit install'[/dim]"
-        )
+        console.print("[dim]  4. For pre-commit: Install with 'pre-commit install'[/dim]")
 
     except Exception as e:
         console.print(f"[red]❌ Failed to generate templates: {e}[/red]")
