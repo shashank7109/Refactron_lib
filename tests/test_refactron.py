@@ -27,8 +27,7 @@ def test_analyze_simple_file() -> None:
     """Test analyzing a simple Python file."""
     # Create a temporary file
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write(
-            """
+        f.write("""
 def simple_function():
     '''A simple function.'''
     return 42
@@ -36,8 +35,7 @@ def simple_function():
 def complex_function(a, b, c, d, e, f):
     '''A function with too many parameters.'''
     return a + b + c + d + e + f
-"""
-        )
+""")
         temp_path = f.name
 
     try:
