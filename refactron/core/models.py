@@ -1,5 +1,6 @@
 """Data models for Refactron."""
 
+import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -94,6 +95,7 @@ class RefactoringOperation:
     old_code: str
     new_code: str
     risk_score: float  # 0.0 (safe) to 1.0 (risky)
+    operation_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     reasoning: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 

@@ -22,11 +22,12 @@ from refactron.core.incremental import IncrementalAnalysisTracker
 from refactron.core.logging_config import setup_logging
 from refactron.core.memory_profiler import MemoryProfiler
 from refactron.core.metrics import get_metrics_collector
-from refactron.core.models import FileMetrics
+from refactron.core.models import FileMetrics, RefactoringOperation
 from refactron.core.parallel import ParallelProcessor
 from refactron.core.prometheus_metrics import start_metrics_server
 from refactron.core.refactor_result import RefactorResult
 from refactron.core.telemetry import get_telemetry_collector
+from refactron.patterns import PatternFingerprinter, PatternStorage
 from refactron.refactorers.add_docstring_refactorer import AddDocstringRefactorer
 from refactron.refactorers.base_refactorer import BaseRefactorer
 from refactron.refactorers.extract_method_refactorer import ExtractMethodRefactorer
@@ -120,6 +121,15 @@ class Refactron:
             pressure_threshold_percent=self.config.memory_pressure_threshold_percent,
             pressure_threshold_available_mb=self.config.memory_pressure_threshold_available_mb,
         )
+
+        # Initialize pattern learning components
+        try:
+            self.pattern_storage = PatternStorage()
+            self.pattern_fingerprinter = PatternFingerprinter()
+        except Exception as e:
+            logger.warning(f"Failed to initialize pattern learning system: {e}")
+            self.pattern_storage = None
+            self.pattern_fingerprinter = None
 
         self._initialize_analyzers()
         self._initialize_refactorers()
@@ -520,6 +530,18 @@ class Refactron:
 
             try:
                 ops = refactorer.refactor(file_path, source_code)
+
+                # Fingerprint code patterns for each operation
+                if self.pattern_fingerprinter:
+                    for op in ops:
+                        try:
+                            # Fingerprint the old code pattern
+                            pattern_hash = self.pattern_fingerprinter.fingerprint_code(op.old_code)
+                            # Store pattern hash in operation metadata
+                            op.metadata["code_pattern_hash"] = pattern_hash
+                        except Exception as e:
+                            logger.debug(f"Failed to fingerprint code pattern: {e}")
+
                 operations.extend(ops)
             except Exception as e:
                 # Log refactorer failure but continue with other refactorers
@@ -576,6 +598,91 @@ class Refactron:
             "parallel_processing": self.parallel_processor.get_config(),
             "memory_profiler": self.memory_profiler.get_stats(),
         }
+
+    def record_feedback(
+        self,
+        operation_id: str,
+        action: str,
+        reason: Optional[str] = None,
+        operation: Optional[RefactoringOperation] = None,
+    ) -> None:
+        """
+        Record developer feedback on a refactoring suggestion.
+
+        Args:
+            operation_id: Unique identifier for the refactoring operation
+            action: Feedback action - "accepted", "rejected", or "ignored"
+            reason: Optional reason for the feedback
+            operation: Optional RefactoringOperation object (used to extract metadata)
+
+        Note:
+            If pattern storage is not initialized, this method will silently fail.
+        """
+        if not self.pattern_storage or action not in ("accepted", "rejected", "ignored"):
+            return
+
+        try:
+            from refactron.patterns.models import RefactoringFeedback
+
+            # Extract metadata from operation if provided
+            code_pattern_hash = None
+            project_path = None
+            operation_type = "unknown"
+            file_path = Path(".")
+
+            if operation:
+                operation_type = operation.operation_type
+                file_path = operation.file_path
+                code_pattern_hash = operation.metadata.get("code_pattern_hash")
+
+                # Try to detect project root
+                try:
+                    project_path = self._detect_project_root(file_path)
+                except Exception:
+                    pass
+
+            # Create feedback record
+            feedback = RefactoringFeedback.create(
+                operation_id=operation_id,
+                operation_type=operation_type,
+                file_path=file_path,
+                action=action,
+                code_pattern_hash=code_pattern_hash,
+                project_path=project_path,
+                reason=reason,
+            )
+
+            # Save feedback
+            self.pattern_storage.save_feedback(feedback)
+            logger.debug(f"Recorded feedback for operation {operation_id}: {action}")
+
+        except Exception as e:
+            logger.warning(f"Failed to record feedback: {e}", exc_info=True)
+
+    def _detect_project_root(self, file_path: Path) -> Optional[Path]:
+        """
+        Detect project root by looking for common markers.
+
+        Args:
+            file_path: Path to a file in the project
+
+        Returns:
+            Path to project root, or None if not found
+        """
+        current = file_path.parent.resolve()
+
+        # Common project markers
+        markers = [".git", "setup.py", "pyproject.toml", "setup.cfg", ".refactron"]
+
+        for _ in range(10):  # Limit search depth
+            for marker in markers:
+                if (current / marker).exists():
+                    return current
+            if current.parent == current:  # Reached filesystem root
+                break
+            current = current.parent
+
+        return file_path.parent  # Fallback to file's parent directory
 
     def clear_caches(self) -> None:
         """Clear all performance-related caches."""

@@ -16,6 +16,7 @@ from refactron.core.analysis_result import AnalysisResult
 from refactron.core.backup import BackupRollbackSystem
 from refactron.core.config import RefactronConfig
 from refactron.core.exceptions import ConfigError
+from refactron.core.refactor_result import RefactorResult
 
 console = Console()
 
@@ -233,6 +234,77 @@ def _print_refactor_messages(summary: dict, preview: bool) -> None:
         console.print("\n[green]✅ Refactoring completed! Don't forget to test your code.[/green]")
 
 
+def _collect_feedback_interactive(
+    refactron: Refactron, result: RefactorResult, collect_feedback: bool = False
+) -> None:
+    """
+    Collect feedback from user interactively for each refactoring operation.
+
+    Args:
+        refactron: Refactron instance to record feedback
+        result: RefactorResult containing operations
+        collect_feedback: If True, prompt for feedback
+    """
+    if not collect_feedback or not result.operations:
+        return
+
+    console.print("\n[bold]💬 Feedback Collection (Optional)[/bold]")
+    console.print("[dim]Help us learn from your feedback to improve suggestions![/dim]\n")
+
+    for op in result.operations:
+        console.print(f"\n[cyan]Operation ID: {op.operation_id}[/cyan]")
+        console.print(f"[dim]Type: {op.operation_type} at {op.file_path}:{op.line_number}[/dim]")
+
+        action = click.prompt(
+            "Your feedback? (a)ccepted, (r)ejected, (i)gnored, or (s)kip",
+            type=click.Choice(["a", "r", "i", "s"], case_sensitive=False),
+            default="s",
+        ).lower()
+
+        if action == "s":
+            continue
+
+        reason = None
+        if action in ("r", "a"):
+            reason = click.prompt(
+                "Reason (optional, press Enter to skip)",
+                default="",
+                show_default=False,
+            )
+            if not reason.strip():
+                reason = None
+
+        action_map = {"a": "accepted", "r": "rejected", "i": "ignored"}
+        refactron.record_feedback(
+            operation_id=op.operation_id,
+            action=action_map[action],
+            reason=reason,
+            operation=op,
+        )
+
+    console.print("\n[green]✅ Thank you for your feedback![/green]")
+
+
+def _record_applied_operations(refactron: Refactron, result: RefactorResult) -> None:
+    """
+    Automatically record all operations as accepted when --apply is used.
+
+    Args:
+        refactron: Refactron instance to record feedback
+        result: RefactorResult containing operations
+    """
+    if not result.operations:
+        return
+
+    for op in result.operations:
+        refactron.record_feedback(
+            operation_id=op.operation_id,
+            action="accepted",
+            reason="Applied via --apply flag",
+            operation=op,
+        )
+
+
 @click.group()
 @click.version_option(version="1.0.1")
 def main() -> None:
@@ -415,6 +487,11 @@ def analyze(
     multiple=True,
     help="Specific refactoring types to apply",
 )
+@click.option(
+    "--feedback/--no-feedback",
+    default=False,
+    help="Collect interactive feedback on refactoring suggestions",
+)
 def refactor(
     target: str,
     config: Optional[str],
@@ -422,6 +499,7 @@ def refactor(
     environment: Optional[str],
     preview: bool,
     types: tuple,
+    feedback: bool,
 ) -> None:
     """
     Refactor code with intelligent transformations.
@@ -495,8 +573,75 @@ def refactor(
         console.print("[bold]Refactoring Operations:[/bold]\n")
         console.print(result.show_diff())
 
+        # Record feedback
+        if not preview:
+            # Auto-record as accepted when applying changes
+            _record_applied_operations(refactron, result)
+        elif feedback:
+            # Interactive feedback collection in preview mode
+            _collect_feedback_interactive(refactron, result, collect_feedback=True)
+
     if session_id and not preview:
         console.print("\n[dim]💡 Tip: Run 'refactron rollback' to undo these changes[/dim]")
+
+
+@main.command()
+@click.argument("operation_id", type=str)
+@click.option(
+    "--action",
+    "-a",
+    type=click.Choice(["accepted", "rejected", "ignored"], case_sensitive=False),
+    required=True,
+    help="Feedback action: accepted, rejected, or ignored",
+)
+@click.option(
+    "--reason",
+    "-r",
+    type=str,
+    help="Optional reason for the feedback",
+)
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Path to configuration file",
+)
+def feedback(operation_id: str, action: str, reason: Optional[str], config: Optional[str]) -> None:
+    """
+    Provide feedback on a refactoring operation.
+
+    OPERATION_ID: The unique identifier of the refactoring operation
+
+    Examples:
+      refactron feedback abc-123 --action accepted --reason "Improved readability"
+      refactron feedback xyz-789 --action rejected --reason "Too risky"
+    """
+    console.print("\n💬 [bold blue]Refactron Feedback[/bold blue]\n")
+
+    # Load config
+    cfg = _load_config(config, None, None)
+
+    # Initialize Refactron
+    try:
+        refactron = Refactron(cfg)
+    except Exception as e:
+        console.print(f"[red]❌ Failed to initialize Refactron: {e}[/red]")
+        raise SystemExit(1)
+
+    # Record feedback
+    try:
+        refactron.record_feedback(
+            operation_id=operation_id,
+            action=action.lower(),
+            reason=reason,
+        )
+        console.print(f"[green]✅ Feedback recorded for operation {operation_id}[/green]")
+        console.print(f"[dim]Action: {action}[/dim]")
+        if reason:
+            console.print(f"[dim]Reason: {reason}[/dim]")
+    except Exception as e:
+        console.print(f"[red]❌ Failed to record feedback: {e}[/red]")
+        raise SystemExit(1)
 
 
 @main.command()
