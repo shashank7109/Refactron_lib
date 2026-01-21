@@ -88,7 +88,8 @@ class ConfigLoader:
                 base_config = {}
             elif not isinstance(base_config, dict):
                 raise ConfigError(
-                    "'base' must be a dictionary when provided; use null or omit 'base' to use top-level keys as base configuration",
+                    "'base' must be a dictionary when provided; use null or omit "
+                    "'base' to use top-level keys as base configuration",
                     config_path=config_path,
                     config_key="base",
                 )
@@ -130,7 +131,8 @@ class ConfigLoader:
         # Validate the merged configuration
         ConfigValidator.validate(final_config, config_path)
 
-        return final_config
+        result: Dict[str, Any] = final_config
+        return result
 
     @staticmethod
     def _merge_config(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:

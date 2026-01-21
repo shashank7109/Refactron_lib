@@ -53,27 +53,27 @@ import sys
 try:
     with open(".refactron-report.json", "r") as f:
         data = json.load(f)
-    
+
     summary = data.get("summary", {{}})
     critical = summary.get("critical", 0)
     errors = summary.get("errors", 0)
     warnings = summary.get("warnings", 0)
-    
+
     print(f"📊 Refactron Pre-Commit Analysis:")
     print(f"  Critical: {{critical}}")
     print(f"  Errors: {{errors}}")
     print(f"  Warnings: {{warnings}}")
-    
+
     fail = False
-    
+
     if {str(fail_on_critical)} and critical > {max_critical}:
         print(f"❌ Quality gate failed: Critical issues ({{critical}}) > {max_critical}")
         fail = True
-    
+
     if {str(fail_on_errors)} and errors > {max_errors}:
         print(f"❌ Quality gate failed: Error issues ({{errors}}) > {max_errors}")
         fail = True
-    
+
     if fail:
         sys.exit(1)
 EOF

@@ -48,7 +48,9 @@ cache:
     - pip install refactron
   script:
     - mkdir -p .refactron-reports
-    - refactron analyze . --format json --output .refactron-reports/analysis.json --log-format json || true
+    - refactron analyze . --format json \\
+      --output .refactron-reports/analysis.json \\
+      --log-format json || true
     - |
       python << 'EOF'
 import json
@@ -57,30 +59,44 @@ import sys
 try:
     with open('.refactron-reports/analysis.json', 'r') as f:
         data = json.load(f)
-    
+
     summary = data.get('summary', {{}})
     critical = summary.get('critical', 0)
     errors = summary.get('errors', 0)
     warnings = summary.get('warnings', 0)
     total = summary.get('total_issues', 0)
-    
+
     print(f"📊 Analysis Summary:")
     print(f"  Critical: {{critical}}")
     print(f"  Errors: {{errors}}")
     print(f"  Warnings: {{warnings}}")
     print(f"  Total: {{total}}")
-    
+
     # Quality gate enforcement
     fail = False
-    
-    if {str(quality_gate.get('fail_on_critical', True))} and critical > {quality_gate.get('max_critical', 0)}:
-        print(f"❌ Quality gate failed: Critical issues ({{critical}}) > threshold ({quality_gate.get('max_critical', 0)})")
+
+    fail_on_critical = {str(quality_gate.get('fail_on_critical', True))}
+    max_critical = {quality_gate.get('max_critical', 0)}
+    if fail_on_critical and critical > max_critical:
+        threshold = max_critical
+        msg = (
+            f"❌ Quality gate failed: Critical issues ({{critical}}) > "
+            f"threshold ({{threshold}})"
+        )
+        print(msg)
         fail = True
-    
-    if {str(quality_gate.get('fail_on_errors', False))} and errors > {quality_gate.get('max_errors', 10)}:
-        print(f"❌ Quality gate failed: Error issues ({{errors}}) > threshold ({quality_gate.get('max_errors', 10)})")
+
+    fail_on_errors = {str(quality_gate.get('fail_on_errors', False))}
+    max_errors = {quality_gate.get('max_errors', 10)}
+    if fail_on_errors and errors > max_errors:
+        error_threshold = max_errors
+        msg = (
+            f"❌ Quality gate failed: Error issues ({{errors}}) > "
+            f"threshold ({{error_threshold}})"
+        )
+        print(msg)
         fail = True
-    
+
     if fail:
         sys.exit(1)
 except FileNotFoundError:
@@ -154,8 +170,9 @@ pre-commit:refactron:
     - |
       if [ "$CI_MERGE_REQUEST_ID" != "" ]; then
         git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
-        CHANGED_FILES=$(git diff --name-only origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME | grep '\\.py$' || true)
-        
+        CHANGED_FILES=$(git diff --name-only origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME \\
+          | grep '\\.py$' || true)
+
         if [ -n "$CHANGED_FILES" ]; then
           echo "$CHANGED_FILES" | xargs refactron analyze --format json --log-format json
         else

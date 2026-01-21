@@ -33,7 +33,7 @@ class PRComment:
 
         if self.suggestion:
             lines.append("**Suggestion:**")
-            lines.append(f"```python")
+            lines.append("```python")
             lines.append(self.suggestion)
             lines.append("```")
             lines.append("")
@@ -75,9 +75,11 @@ class PRIntegration:
 
         # Critical issues warning
         if summary["critical"] > 0:
-            lines.append(
-                f"⚠️ **{summary['critical']} critical issue(s) found - please review before merging**"
+            msg = (
+                f"⚠️ **{summary['critical']} critical issue(s) found - "
+                "please review before merging**"
             )
+            lines.append(msg)
             lines.append("")
 
         # Files failed warning

@@ -142,15 +142,22 @@ class ConfigValidator:
             "cache_cleanup_threshold_percent": (0.0, 1.0),
         }
 
-        for field, (min_val, max_val) in float_fields.items():
-            if field in config_dict:
-                value = config_dict[field]
-                if not isinstance(value, (int, float)):
-                    errors.append(f"'{field}' must be a number, got {type(value).__name__}")
-                elif min_val is not None and value < min_val:
-                    errors.append(f"'{field}' must be >= {min_val}, got {value}")
-                elif max_val is not None and value > max_val:
-                    errors.append(f"'{field}' must be <= {max_val}, got {value}")
+        for float_field, value_range in float_fields.items():
+            if float_field in config_dict:
+                float_min: Optional[float] = value_range[0]
+                float_max: Optional[float] = value_range[1]
+                float_value_raw = config_dict[float_field]
+                if not isinstance(float_value_raw, (int, float)):
+                    errors.append(
+                        f"'{float_field}' must be a number, "
+                        f"got {type(float_value_raw).__name__}"
+                    )
+                else:
+                    float_value: float = float(float_value_raw)
+                    if float_min is not None and float_value < float_min:
+                        errors.append(f"'{float_field}' must be >= {float_min}, got {float_value}")
+                    elif float_max is not None and float_value > float_max:
+                        errors.append(f"'{float_field}' must be <= {float_max}, got {float_value}")
 
         # Validate boolean fields
         boolean_fields = {

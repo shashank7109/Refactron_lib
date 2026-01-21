@@ -4,7 +4,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from refactron.core.analysis_result import AnalysisResult
 
@@ -48,9 +48,11 @@ class QualityGate:
 
         # Check warning-level issues
         if summary["warnings"] > self.max_warnings:
-            failures.append(
-                f"Warning-level issues exceed threshold: {summary['warnings']} > {self.max_warnings}"
+            msg = (
+                f"Warning-level issues exceed threshold: "
+                f"{summary['warnings']} > {self.max_warnings}"
             )
+            failures.append(msg)
 
         # Check total issues
         if self.max_total and summary["total_issues"] > self.max_total:
@@ -62,9 +64,11 @@ class QualityGate:
         if summary["total_files"] > 0:
             success_rate = summary["files_analyzed"] / summary["total_files"]
             if success_rate < self.min_success_rate:
-                failures.append(
-                    f"Analysis success rate too low: {success_rate:.1%} < {self.min_success_rate:.1%}"
+                msg = (
+                    f"Analysis success rate too low: {success_rate:.1%} < "
+                    f"{self.min_success_rate:.1%}"
                 )
+                failures.append(msg)
 
         # Check fail flags
         if self.fail_on_critical and summary["critical"] > 0:
@@ -122,7 +126,8 @@ class QualityGateParser:
 
         try:
             with open(json_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                result: Dict[str, Any] = json.load(f)
+                return result
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in output file: {e}") from e
 

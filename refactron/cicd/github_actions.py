@@ -18,8 +18,10 @@ class GitHubActionsGenerator:
         """Generate GitHub Actions workflow for code analysis.
 
         Args:
-            python_versions: Python versions to test (default: ['3.8', '3.9', '3.10', '3.11', '3.12'])
-            trigger_on: Events to trigger on (default: ['push', 'pull_request'])
+            python_versions: Python versions to test
+                (default: ['3.8', '3.9', '3.10', '3.11', '3.12'])
+            trigger_on: Events to trigger on
+                (default: ['push', 'pull_request'])
             quality_gate: Quality gate configuration
             cache_enabled: Enable dependency caching
             upload_artifacts: Upload analysis reports as artifacts
@@ -57,31 +59,33 @@ jobs:
     strategy:
       matrix:
         python-version: [{python_matrix}]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python ${{{{ matrix.python-version }}}}
         uses: actions/setup-python@v5
         with:
           python-version: ${{{{ matrix.python-version }}}}
           cache: 'pip'
-      
+
       - name: Install Refactron
         run: |
           python -m pip install --upgrade pip
           pip install refactron
-      
+
       - name: Run Refactron Analysis
         id: analyze
         run: |
           mkdir -p .refactron-reports
-          refactron analyze . --format json --output .refactron-reports/analysis.json --log-format json || ANALYSIS_EXIT=$?
+          refactron analyze . --format json \\
+            --output .refactron-reports/analysis.json \\
+            --log-format json || ANALYSIS_EXIT=$?
           ANALYSIS_EXIT=${{ANALYSIS_EXIT:-$?}}
           echo "exit_code=$ANALYSIS_EXIT" >> $GITHUB_OUTPUT
         continue-on-error: true
-      
+
       - name: Parse Quality Gate
         if: always()
         run: |
@@ -106,12 +110,26 @@ print(f"  Total: {{summary.get('total_issues', 0)}}")
 
 # Quality gate checks
 fail = False
-if {str(quality_gate.get('fail_on_critical', True))} and critical > {quality_gate.get('max_critical', 0)}:
-    print(f"❌ Quality gate failed: Critical issues ({{critical}}) exceed threshold ({quality_gate.get('max_critical', 0)})")
+fail_on_critical = {str(quality_gate.get('fail_on_critical', True))}
+max_critical = {quality_gate.get('max_critical', 0)}
+if fail_on_critical and critical > max_critical:
+    threshold = max_critical
+    msg = (
+        f"❌ Quality gate failed: Critical issues ({{critical}}) "
+        f"exceed threshold ({{threshold}})"
+    )
+    print(msg)
     fail = True
 
-if {str(quality_gate.get('fail_on_errors', False))} and errors > {quality_gate.get('max_errors', 10)}:
-    print(f"❌ Quality gate failed: Error issues ({{errors}}) exceed threshold ({quality_gate.get('max_errors', 10)})")
+fail_on_errors = {str(quality_gate.get('fail_on_errors', False))}
+max_errors = {quality_gate.get('max_errors', 10)}
+if fail_on_errors and errors > max_errors:
+    error_threshold = max_errors
+    msg = (
+        f"❌ Quality gate failed: Error issues ({{errors}}) "
+        f"exceed threshold ({{error_threshold}})"
+    )
+    print(msg)
     fail = True
 
 if fail:
@@ -121,7 +139,7 @@ EOF
             echo "⚠️ No analysis report found"
             exit 1
           fi
-      
+
       - name: Upload Analysis Report
         if: always() && {str(upload_artifacts).lower()}
         uses: actions/upload-artifact@v4
@@ -129,7 +147,7 @@ EOF
           name: refactron-analysis-${{{{ matrix.python-version }}}}
           path: .refactron-reports/analysis.json
           retention-days: 30
-      
+
       - name: Comment PR with Results
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
@@ -137,26 +155,27 @@ EOF
           script: |
             const fs = require('fs');
             let summary = '## 📊 Refactron Analysis Results\\n\\n';
-            
+
             try {{
               const data = JSON.parse(fs.readFileSync('.refactron-reports/analysis.json', 'utf8'));
               const s = data.summary || {{}};
-              
+
               summary += `| Metric | Value |\\n`;
               summary += `|--------|-------|\\n`;
-              summary += `| Files Analyzed | ${{s.files_analyzed || 0}}/${{s.total_files || 0}} |\\n`;
+              files_str = `${{s.files_analyzed || 0}}/${{s.total_files || 0}}`;
+              summary += `| Files Analyzed | ${{files_str}} |\\n`;
               summary += `| Critical Issues | ${{s.critical || 0}} |\\n`;
               summary += `| Error Issues | ${{s.errors || 0}} |\\n`;
               summary += `| Warning Issues | ${{s.warnings || 0}} |\\n`;
               summary += `| Total Issues | ${{s.total_issues || 0}} |\\n`;
-              
+
               if (s.critical > 0) {{
                 summary += '\\n⚠️ **Critical issues found - please review before merging**\\n';
               }}
             }} catch (e) {{
               summary += '⚠️ Could not parse analysis results\\n';
             }}
-            
+
             github.rest.issues.createComment({{
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -194,28 +213,29 @@ on:
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python {python_version}
         uses: actions/setup-python@v5
         with:
           python-version: '{python_version}'
           cache: 'pip'
-      
+
       - name: Install Refactron
         run: |
           python -m pip install --upgrade pip
           pip install refactron
-      
+
       - name: Run Refactron on Changed Files
         run: |
           if [ "${{{{ github.event_name }}}}" == "pull_request" ]; then
             git fetch origin ${{{{ github.base_ref }}}}
-            CHANGED_FILES=$(git diff --name-only origin/${{{{ github.base_ref }}}} | grep '\\.py$' || true)
-            
+            CHANGED_FILES=$(git diff --name-only origin/${{{{ github.base_ref }}}} \\
+              | grep '\\.py$' || true)
+
             if [ -n "$CHANGED_FILES" ]; then
               echo "$CHANGED_FILES" | xargs refactron analyze --format json --log-format json
             else
