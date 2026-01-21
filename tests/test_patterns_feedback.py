@@ -225,13 +225,16 @@ class TestFeedbackStorage:
             # Create a project directory with .refactron marker
             project_dir = Path(tmpdir) / "project"
             project_dir.mkdir()
-            (project_dir / ".refactron").mkdir()
+            storage_dir = project_dir / ".refactron" / "patterns"
+            storage_dir.mkdir(parents=True)
 
             test_file = project_dir / "test.py"
             test_file.write_text("def foo(): pass\n")
 
             config = RefactronConfig()
             refactron1 = Refactron(config)
+            # Override storage with temporary directory for test isolation
+            refactron1.pattern_storage = PatternStorage(storage_dir=storage_dir)
 
             if not refactron1.pattern_storage:
                 pytest.skip("Pattern storage not initialized")
@@ -256,6 +259,8 @@ class TestFeedbackStorage:
 
             # Create new Refactron instance (new session)
             refactron2 = Refactron(config)
+            # Override storage with temporary directory for test isolation
+            refactron2.pattern_storage = PatternStorage(storage_dir=storage_dir)
 
             # Verify feedback persists
             feedback_list = refactron2.pattern_storage.load_feedback()
