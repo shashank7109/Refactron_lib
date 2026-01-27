@@ -636,10 +636,22 @@ class Refactron:
             operation_type = "unknown"
             file_path = Path(".")
 
+            # Prepare metadata for operation reconstruction if needed
+            operation_metadata = {}
             if operation:
                 operation_type = operation.operation_type
                 file_path = operation.file_path
                 code_pattern_hash = operation.metadata.get("code_pattern_hash")
+
+                # Store operation details in metadata for later reconstruction
+                # (useful if learning fails initially and needs to be retried)
+                operation_metadata = {
+                    "old_code": operation.old_code,
+                    "new_code": operation.new_code,
+                    "line_number": operation.line_number,
+                    "description": operation.description,
+                    "risk_score": operation.risk_score,
+                }
 
                 # Try to detect project root
                 try:
@@ -660,6 +672,7 @@ class Refactron:
                 code_pattern_hash=code_pattern_hash,
                 project_path=project_path,
                 reason=reason,
+                metadata=operation_metadata,
             )
 
             # Save feedback

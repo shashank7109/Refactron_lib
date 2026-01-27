@@ -186,14 +186,24 @@ class TestLearningService:
                 service.cleanup_old_patterns(days=-1)
 
     def test_cleanup_old_patterns_keeps_recent_patterns(self):
-        """Test cleanup keeps recent patterns."""
+        """Test cleanup keeps recent patterns and removes old ones."""
         with IsolatedStorage() as storage:
-            # Create a recent pattern
+            # Create an old pattern (should be removed)
+            old_pattern = RefactoringPattern.create(
+                pattern_hash="old_hash",
+                operation_type="extract_method",
+                code_snippet_before="old code 1",
+                code_snippet_after="new code 1",
+            )
+            old_pattern.last_seen = datetime.now(timezone.utc) - timedelta(days=100)
+            storage.save_pattern(old_pattern)
+
+            # Create a recent pattern (should be kept)
             recent_pattern = RefactoringPattern.create(
                 pattern_hash="recent_hash",
                 operation_type="extract_method",
-                code_snippet_before="old code",
-                code_snippet_after="new code",
+                code_snippet_before="old code 2",
+                code_snippet_after="new code 2",
             )
             recent_pattern.last_seen = datetime.now(timezone.utc) - timedelta(days=1)
             storage.save_pattern(recent_pattern)
@@ -201,9 +211,13 @@ class TestLearningService:
             service = LearningService(storage=storage)
             stats = service.cleanup_old_patterns(days=90)
 
-            # Should not remove recent pattern
+            # Verify old pattern was removed
+            assert storage.get_pattern(old_pattern.pattern_id) is None
+            # Verify recent pattern was kept
             assert storage.get_pattern(recent_pattern.pattern_id) is not None
-            assert stats["removed"] == 0
+            # Verify statistics
+            assert stats["removed"] == 1
+            assert stats["total"] == 2
 
     def test_reconstruct_operation_from_feedback(self):
         """Test reconstructing operation from feedback metadata."""

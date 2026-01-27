@@ -1,5 +1,6 @@
 """Background service for pattern learning and maintenance."""
 
+import copy
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
@@ -62,7 +63,12 @@ class LearningService:
 
             # Filter feedback that needs processing
             # For now, we'll process all feedback (in future, could track processed status)
-            feedback_to_process = all_feedback[:limit] if limit else all_feedback
+            if limit is None:
+                feedback_to_process = all_feedback
+            else:
+                if limit < 0:
+                    raise ValueError(f"limit must be non-negative or None, got {limit}")
+                feedback_to_process = all_feedback[:limit]
 
             logger.info(f"Processing {len(feedback_to_process)} feedback records")
 
@@ -121,16 +127,22 @@ class LearningService:
 
             for pattern_id, pattern in patterns.items():
                 try:
+                    # Deep-copy pattern before mutation to avoid thread-safety issues
+                    # (load_patterns returns cached instances that could be modified concurrently)
+                    pattern_copy = copy.deepcopy(pattern)
+
                     # Get latest metrics
                     metric = self.storage.get_pattern_metric(pattern_id)
 
-                    # Recalculate benefit score
-                    old_score = pattern.average_benefit_score
-                    pattern.average_benefit_score = pattern.calculate_benefit_score(metric)
+                    # Recalculate benefit score on copy
+                    old_score = pattern_copy.average_benefit_score
+                    pattern_copy.average_benefit_score = pattern_copy.calculate_benefit_score(
+                        metric
+                    )
 
                     # Save if changed
-                    if abs(pattern.average_benefit_score - old_score) > 0.01:
-                        self.storage.save_pattern(pattern)
+                    if abs(pattern_copy.average_benefit_score - old_score) > 0.01:
+                        self.storage.save_pattern(pattern_copy)
                         updated += 1
 
                 except Exception as e:
@@ -180,14 +192,10 @@ class LearningService:
                         f"Removing old pattern {pattern_id} " f"(last seen: {pattern.last_seen})"
                     )
 
-            # Save remaining patterns (remove old ones by saving only those to keep)
+            # Replace all patterns with only those to keep (truly removes old ones)
             if removed_count > 0:
-                # Save patterns to keep individually (storage handles deduplication)
-                for pattern in patterns_to_keep.values():
-                    self.storage.save_pattern(pattern)
-
-                # Note: This approach saves all patterns individually. In production,
-                # consider adding a batch replace method to PatternStorage for efficiency.
+                # Use replace_patterns to completely replace storage, removing old patterns
+                self.storage.replace_patterns(patterns_to_keep)
                 logger.info(f"Removed {removed_count} old patterns")
 
             return {"removed": removed_count, "total": total}

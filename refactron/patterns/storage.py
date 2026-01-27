@@ -156,6 +156,19 @@ class PatternStorage:
             patterns[pattern.pattern_id] = pattern
             self._save_patterns_dict(patterns)
 
+    def replace_patterns(self, patterns: Dict[str, RefactoringPattern]) -> None:
+        """
+        Replace all patterns in storage with the provided dictionary.
+
+        This method completely replaces the pattern storage, useful for cleanup
+        operations where patterns need to be removed.
+
+        Args:
+            patterns: Dictionary mapping pattern_id to RefactoringPattern
+        """
+        with self._lock:
+            self._save_patterns_dict(patterns)
+
     def load_patterns(self) -> Dict[str, RefactoringPattern]:
         """
         Load all patterns from storage.

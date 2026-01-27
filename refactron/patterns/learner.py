@@ -1,5 +1,6 @@
 """Pattern learning engine that learns from feedback and refactoring history."""
 
+import copy
 import logging
 from typing import Dict, List, Optional, Tuple
 
@@ -79,11 +80,13 @@ class PatternLearner:
             # Update pattern statistics from feedback
             pattern.update_from_feedback(feedback.action)
 
-            # Update benefit score if accepted
+            # Update benefit score if accepted and we have metrics
             if feedback.action == "accepted":
-                # Update average benefit score (simplified for now)
-                # In future, this could use actual metrics comparison
-                pattern.average_benefit_score = pattern.calculate_benefit_score()
+                # Only update benefit score if we have metrics to calculate from
+                # Otherwise calculate_benefit_score() would just return the existing value
+                metric = self.storage.get_pattern_metric(pattern.pattern_id)
+                if metric is not None:
+                    pattern.average_benefit_score = pattern.calculate_benefit_score(metric)
 
             # Save updated pattern
             try:
@@ -170,15 +173,24 @@ class PatternLearner:
                         patterns_to_save[pattern.pattern_id] = pattern
                         stats["created"] += 1
                     else:
-                        # Update existing pattern
+                        # Deep-copy pattern before mutation to avoid thread-safety issues
+                        # (load_patterns returns cached instances that could be modified
+                        # concurrently)
                         if pattern.pattern_id not in patterns_to_save:
+                            pattern = copy.deepcopy(pattern)
                             patterns_to_save[pattern.pattern_id] = pattern
+                        else:
+                            # Already have a copy, use it
+                            pattern = patterns_to_save[pattern.pattern_id]
                         stats["updated"] += 1
 
-                    # Update pattern statistics
+                    # Update pattern statistics on copy
                     pattern.update_from_feedback(feedback.action)
                     if feedback.action == "accepted":
-                        pattern.average_benefit_score = pattern.calculate_benefit_score()
+                        # Only update benefit score if we have metrics
+                        metric = self.storage.get_pattern_metric(pattern.pattern_id)
+                        if metric is not None:
+                            pattern.average_benefit_score = pattern.calculate_benefit_score(metric)
 
                 except Exception as e:
                     logger.warning(
