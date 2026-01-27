@@ -137,7 +137,7 @@ class TestLearningService:
                 code_pattern_hash=pattern_hash,
             )
 
-            pattern_id = learner.learn_from_feedback(operation, feedback)
+            learner.learn_from_feedback(operation, feedback)
 
             service = LearningService(storage=storage, learner=learner)
             stats = service.update_pattern_scores()

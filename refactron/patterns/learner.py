@@ -1,7 +1,6 @@
 """Pattern learning engine that learns from feedback and refactoring history."""
 
 import logging
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from refactron.core.models import FileMetrics, RefactoringOperation
@@ -65,7 +64,8 @@ class PatternLearner:
                     pattern_hash = self.fingerprinter.fingerprint_code(operation.old_code)
                 except Exception as e:
                     logger.warning(
-                        f"Failed to fingerprint code pattern for operation {operation.operation_id}: {e}"
+                        f"Failed to fingerprint code pattern for operation "
+                        f"{operation.operation_id}: {e}"
                     )
                     return None
 
@@ -115,7 +115,8 @@ class PatternLearner:
             feedback_list: List of (operation, feedback) tuples to process
 
         Returns:
-            Dictionary with statistics: {'processed': int, 'created': int, 'updated': int, 'failed': int}
+            Dictionary with statistics: {'processed': int, 'created': int,
+            'updated': int, 'failed': int}
 
         Raises:
             ValueError: If feedback_list is None or contains None values
