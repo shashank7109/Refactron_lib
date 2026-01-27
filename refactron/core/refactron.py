@@ -122,30 +122,55 @@ class Refactron:
             pressure_threshold_available_mb=self.config.memory_pressure_threshold_available_mb,
         )
 
-        # Initialize pattern learning components
-        try:
-            self.pattern_storage = PatternStorage()
-            self.pattern_fingerprinter = PatternFingerprinter()
-            from refactron.patterns.learner import PatternLearner
-            from refactron.patterns.matcher import PatternMatcher
-            from refactron.patterns.ranker import RefactoringRanker
+        # Initialize pattern learning components (if enabled)
+        self.pattern_storage = None
+        self.pattern_fingerprinter = None
+        self.pattern_learner = None
+        self.pattern_matcher = None
+        self.pattern_ranker = None
 
-            self.pattern_learner = PatternLearner(
-                storage=self.pattern_storage, fingerprinter=self.pattern_fingerprinter
-            )
-            self.pattern_matcher = PatternMatcher(storage=self.pattern_storage)
-            self.pattern_ranker = RefactoringRanker(
-                storage=self.pattern_storage,
-                matcher=self.pattern_matcher,
-                fingerprinter=self.pattern_fingerprinter,
-            )
-        except Exception as e:
-            logger.warning(f"Failed to initialize pattern learning system: {e}")
-            self.pattern_storage = None
-            self.pattern_fingerprinter = None
-            self.pattern_learner = None
-            self.pattern_matcher = None
-            self.pattern_ranker = None
+        if self.config.enable_pattern_learning:
+            try:
+                # Initialize storage with custom directory if provided
+                storage_dir = self.config.pattern_storage_dir
+                self.pattern_storage = PatternStorage(storage_dir=storage_dir)
+                self.pattern_fingerprinter = PatternFingerprinter()
+
+                from refactron.patterns.learner import PatternLearner
+                from refactron.patterns.matcher import PatternMatcher
+                from refactron.patterns.ranker import RefactoringRanker
+
+                # Initialize learner only if learning is enabled
+                if self.config.pattern_learning_enabled:
+                    self.pattern_learner = PatternLearner(
+                        storage=self.pattern_storage,
+                        fingerprinter=self.pattern_fingerprinter,
+                    )
+
+                # Matcher is only needed when ranking is enabled
+                if self.config.pattern_ranking_enabled:
+                    self.pattern_matcher = PatternMatcher(storage=self.pattern_storage)
+                    # Initialize ranker only if ranking is enabled
+                    self.pattern_ranker = RefactoringRanker(
+                        storage=self.pattern_storage,
+                        matcher=self.pattern_matcher,
+                        fingerprinter=self.pattern_fingerprinter,
+                    )
+
+                logger.debug("Pattern learning system initialized successfully")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to initialize pattern learning system: {e}. "
+                    "Pattern learning features will be disabled."
+                )
+                # Ensure all components are None on failure
+                self.pattern_storage = None
+                self.pattern_fingerprinter = None
+                self.pattern_learner = None
+                self.pattern_matcher = None
+                self.pattern_ranker = None
+        else:
+            logger.debug("Pattern learning is disabled in configuration")
 
         self._initialize_analyzers()
         self._initialize_refactorers()
@@ -504,8 +529,8 @@ class Refactron:
                 # Catch unexpected errors to ensure refactoring continues
                 logger.error(f"Unexpected error refactoring {file_path}: {e}", exc_info=True)
 
-        # Rank operations if pattern ranker is available
-        if result.operations and self.pattern_ranker:
+        # Rank operations if pattern ranking is enabled and ranker is available
+        if result.operations and self.config.pattern_ranking_enabled and self.pattern_ranker:
             try:
                 # Detect project root for project-specific ranking
                 project_path = None
@@ -661,7 +686,11 @@ class Refactron:
         Note:
             If pattern storage is not initialized, this method will silently fail.
         """
-        if not self.pattern_storage or action not in ("accepted", "rejected", "ignored"):
+        if (
+            not self.config.enable_pattern_learning
+            or not self.pattern_storage
+            or action not in ("accepted", "rejected", "ignored")
+        ):
             return
 
         try:
@@ -716,8 +745,8 @@ class Refactron:
             self.pattern_storage.save_feedback(feedback)
             logger.debug(f"Recorded feedback for operation {operation_id}: {action}")
 
-            # Automatically learn from feedback if operation provided
-            if operation and self.pattern_learner:
+            # Automatically learn from feedback if learning is enabled and operation provided
+            if operation and self.config.pattern_learning_enabled and self.pattern_learner:
                 try:
                     pattern_id = self.pattern_learner.learn_from_feedback(operation, feedback)
                     if pattern_id:

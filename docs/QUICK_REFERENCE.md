@@ -69,6 +69,12 @@ max_function_complexity: 10
 max_function_length: 50
 max_parameters: 5
 max_nesting_depth: 3
+
+# Pattern Learning (optional)
+enable_pattern_learning: true          # Master switch
+pattern_learning_enabled: true        # Learn from feedback
+pattern_ranking_enabled: true         # Rank suggestions by patterns
+pattern_storage_dir: null             # Custom storage path (null = auto)
 ```
 
 ## Common Patterns

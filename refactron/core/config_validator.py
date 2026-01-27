@@ -175,6 +175,9 @@ class ConfigValidator:
             "metrics_detailed",
             "enable_prometheus",
             "enable_telemetry",
+            "enable_pattern_learning",
+            "pattern_learning_enabled",
+            "pattern_ranking_enabled",
         }
 
         for field in boolean_fields:
@@ -230,7 +233,12 @@ class ConfigValidator:
                     errors.append(f"'{field}' must be a dictionary")
 
         # Validate path fields
-        path_fields = {"ast_cache_dir", "incremental_state_file", "log_file"}
+        path_fields = {
+            "ast_cache_dir",
+            "incremental_state_file",
+            "log_file",
+            "pattern_storage_dir",
+        }
 
         for field in path_fields:
             if field in config_dict:
