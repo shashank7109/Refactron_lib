@@ -538,20 +538,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.9'
-      
+
       - name: Install Refactron
         run: pip install refactron
-      
+
       - name: Run Refactron
         run: |
+          # Pattern storage is configured via RefactronConfig.pattern_storage_dir
+          # or your project's .refactron.yaml configuration file
           refactron refactor . --preview
-        env:
-          REFACTRON_PATTERN_STORAGE_DIR: ${{ github.workspace }}/.refactron/patterns
+        # Note: Pattern storage directory is configured via config file or Python API,
+        # not via environment variables. See Configuration section for details.
 ```
 
 ---
@@ -565,4 +567,3 @@ jobs:
 ---
 
 **Pattern Learning System** - Making Refactron smarter with every refactoring! 🧠✨
-

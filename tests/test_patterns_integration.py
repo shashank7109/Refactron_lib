@@ -11,7 +11,6 @@ import pytest
 from refactron import Refactron
 from refactron.core.config import RefactronConfig
 from refactron.core.models import RefactoringOperation
-from refactron.patterns.storage import PatternStorage
 
 
 @pytest.fixture
@@ -90,9 +89,7 @@ def calculate_total(items):
 
         # Find pattern for this operation
         pattern_hash = first_op.metadata["code_pattern_hash"]
-        matching_patterns = [
-            p for p in patterns.values() if p.pattern_hash == pattern_hash
-        ]
+        matching_patterns = [p for p in patterns.values() if p.pattern_hash == pattern_hash]
         assert len(matching_patterns) > 0
 
         pattern = matching_patterns[0]
@@ -104,13 +101,35 @@ def calculate_total(items):
         result2 = refactron.refactor(test_file, preview=True)
         assert len(result2.operations) > 0
 
-        # If ranking is enabled, operations should be ranked
+        # If ranking is enabled, operations should be ranked and
+        # the previously accepted pattern should receive a score (may be same or higher)
         if refactron.pattern_ranker:
+            # Baseline score from the first run for the accepted operation
+            baseline_score = first_op.metadata.get("ranking_score")
+            accepted_pattern_hash = first_op.metadata["code_pattern_hash"]
+
+            # Find operations in the second run that match the accepted pattern
+            matching_ops = [
+                op
+                for op in result2.operations
+                if op.metadata.get("code_pattern_hash") == accepted_pattern_hash
+            ]
+
+            # Verify all operations have ranking scores
             for op in result2.operations:
                 assert "ranking_score" in op.metadata
-                # The operation we accepted should have a higher score
-                if op.operation_id == first_op.operation_id:
-                    assert op.metadata["ranking_score"] > 0
+
+            # The matching operations should have a ranking score
+            # (may be same or higher after learning, depending on pattern acceptance rate)
+            if matching_ops:
+                for op in matching_ops:
+                    score = op.metadata["ranking_score"]
+                    assert score >= 0  # Score should be valid
+                    # After learning, score should be >= baseline (or > 0 if no baseline)
+                    if baseline_score is not None:
+                        assert score >= baseline_score
+                    else:
+                        assert score > 0
 
     def test_multiple_feedback_improves_pattern(self, refactron_with_storage, temp_storage_dir):
         """Test that multiple feedback records improve pattern statistics."""
@@ -153,9 +172,7 @@ def calculate_total(items):
         # Find pattern
         pattern_hash = operations_seen[0].metadata.get("code_pattern_hash")
         if pattern_hash:
-            matching_patterns = [
-                p for p in patterns.values() if p.pattern_hash == pattern_hash
-            ]
+            matching_patterns = [p for p in patterns.values() if p.pattern_hash == pattern_hash]
             if matching_patterns:
                 pattern = matching_patterns[0]
                 assert pattern.accepted_count >= 1
@@ -235,10 +252,23 @@ def func2():
         # Verify storage isolation (different directories)
         assert storage1_dir != storage2_dir
 
-        # If operations were generated and patterns learned, verify isolation
+        # If operations were generated and patterns learned, verify actual isolation
         if op1 and op2 and (len(patterns1) > 0 or len(patterns2) > 0):
             # Patterns should be stored in separate directories
             assert storage1_dir.exists() or storage2_dir.exists()
+
+            # Verify actual pattern isolation: patterns from project1 should not be in project2
+            # and vice versa (they use different storage directories)
+            pattern_hashes1 = {p.pattern_hash for p in patterns1.values()}
+            pattern_hashes2 = {p.pattern_hash for p in patterns2.values()}
+
+            # If both projects learned patterns, they should be different (different code)
+            if pattern_hashes1 and pattern_hashes2:
+                # Different code should produce different pattern hashes
+                assert pattern_hashes1 != pattern_hashes2 or len(pattern_hashes1) == 0
+
+            # Verify storage directories are separate (isolation mechanism)
+            assert refactron1.pattern_storage.storage_dir != refactron2.pattern_storage.storage_dir
 
 
 class TestPatternDatabasePersistence:
@@ -331,7 +361,7 @@ def calculate(x):
 class TestCLIFeedbackCollectionIntegration:
     """Test CLI feedback collection integration."""
 
-    def test_cli_feedback_collection_workflow(self, temp_storage_dir, monkeypatch):
+    def test_cli_feedback_collection_workflow(self, temp_storage_dir):
         """Test that CLI feedback collection works end-to-end."""
         from click.testing import CliRunner
 
@@ -342,21 +372,10 @@ class TestCLIFeedbackCollectionIntegration:
         # Create a test operation ID
         operation_id = "test-op-123"
 
-        # Mock Refactron to use our temp storage
-        def mock_refactron_init(self, config=None):
-            from refactron.core.config import RefactronConfig
-
-            if config is None:
-                config = RefactronConfig(
-                    enable_pattern_learning=True,
-                    pattern_storage_dir=temp_storage_dir,
-                )
-            # Call original __init__ but override storage
-            original_init(self, config)
-            self.pattern_storage = PatternStorage(storage_dir=temp_storage_dir)
-
         # This is a simplified test - full CLI integration is tested in test_patterns_feedback.py
         # Here we just verify the command exists and can be invoked
+        # Note: The command may fail if storage is not properly configured, but the command
+        # itself should be callable (exit code 0 or 1, not 2 which would indicate command not found)
         result = runner.invoke(
             feedback,
             [operation_id, "--action", "accepted", "--reason", "Test"],
@@ -389,14 +408,18 @@ def process_data(data):
         result1 = refactron.refactor(test_file, preview=True)
         initial_ops = result1.operations.copy()
 
+        # Skip if no operations generated
+        if not initial_ops:
+            pytest.skip("No refactoring operations generated")
+
+        op1 = initial_ops[0]
+
         # Record feedback on first operation (accept it)
-        if initial_ops:
-            op1 = initial_ops[0]
-            refactron.record_feedback(
-                operation_id=op1.operation_id,
-                action="accepted",
-                operation=op1,
-            )
+        refactron.record_feedback(
+            operation_id=op1.operation_id,
+            action="accepted",
+            operation=op1,
+        )
 
         # Refactor again - pattern should be learned
         result2 = refactron.refactor(test_file, preview=True)
@@ -412,7 +435,9 @@ def process_data(data):
                     assert "ranking_score" in op.metadata
                     assert op.metadata["ranking_score"] >= 0
 
-    def test_pattern_cleanup_preserves_recent_patterns(self, refactron_with_storage, temp_storage_dir):
+    def test_pattern_cleanup_preserves_recent_patterns(
+        self, refactron_with_storage, temp_storage_dir
+    ):
         """Test that pattern cleanup preserves recent patterns."""
         refactron = refactron_with_storage
 
@@ -460,4 +485,3 @@ def process_data(data):
         service.cleanup_old_patterns(days=365)
         patterns_after_old = refactron.pattern_storage.load_patterns()
         assert len(patterns_after_old) >= len(patterns_before)
-
