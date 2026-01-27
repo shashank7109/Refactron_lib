@@ -152,6 +152,29 @@ enable_telemetry: false
 telemetry_endpoint: null
 
 # ============================================================================
+# PATTERN LEARNING SETTINGS (NEW)
+# ============================================================================
+
+# Master switch for pattern learning system
+# When false, all pattern learning features are disabled
+enable_pattern_learning: true
+
+# Custom storage directory for pattern data
+# null = auto-detect (.refactron/patterns/ in project root or ~/.refactron/patterns/)
+# Set to a path string to use a specific directory
+pattern_storage_dir: null
+
+# Enable learning from developer feedback
+# When true, feedback automatically triggers pattern learning
+# When false, feedback is recorded but not used for learning
+pattern_learning_enabled: true
+
+# Enable ranking of refactoring suggestions based on learned patterns
+# When true, suggestions are ranked by pattern acceptance rates and project-specific weights
+# When false, suggestions are returned in original order without ranking scores
+pattern_ranking_enabled: true
+
+# ============================================================================
 # USAGE EXAMPLES
 # ============================================================================
 

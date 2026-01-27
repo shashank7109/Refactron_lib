@@ -29,6 +29,7 @@ Refactron analyzes Python code for security vulnerabilities, performance issues,
 - Add docstrings, extract methods
 - Preview changes before applying
 - Risk scoring for each refactoring
+- **Pattern Learning** - Learns from your feedback to improve suggestions over time
 
 ### Auto-Fix
 

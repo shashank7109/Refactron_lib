@@ -123,6 +123,12 @@ class RefactronConfig:
     enable_telemetry: bool = False  # Opt-in only
     telemetry_endpoint: Optional[str] = None  # For future remote submission
 
+    # Pattern learning settings
+    enable_pattern_learning: bool = True  # Master switch for pattern learning
+    pattern_storage_dir: Optional[Path] = None  # Custom storage directory (None = default)
+    pattern_learning_enabled: bool = True  # Enable learning from feedback
+    pattern_ranking_enabled: bool = True  # Enable ranking based on learned patterns
+
     @classmethod
     def from_file(
         cls,
@@ -147,7 +153,12 @@ class RefactronConfig:
         config_dict = ConfigLoader.load_from_file(config_path, profile, environment)
 
         # Convert path strings to Path objects
-        path_fields = ["ast_cache_dir", "incremental_state_file", "log_file"]
+        path_fields = [
+            "ast_cache_dir",
+            "incremental_state_file",
+            "log_file",
+            "pattern_storage_dir",
+        ]
         for path_field in path_fields:
             if (
                 path_field in config_dict
@@ -225,6 +236,12 @@ class RefactronConfig:
             "prometheus_port": self.prometheus_port,
             "enable_telemetry": self.enable_telemetry,
             "telemetry_endpoint": self.telemetry_endpoint,
+            "enable_pattern_learning": self.enable_pattern_learning,
+            "pattern_storage_dir": (
+                str(self.pattern_storage_dir) if self.pattern_storage_dir else None
+            ),
+            "pattern_learning_enabled": self.pattern_learning_enabled,
+            "pattern_ranking_enabled": self.pattern_ranking_enabled,
         }
 
         try:

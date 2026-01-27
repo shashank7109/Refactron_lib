@@ -1,4 +1,4 @@
-"""Tests for Phase 3: Feedback Collection System."""
+"""Tests for Phase 3: Feedback Collection System and Phase 8: Module Integration."""
 
 import tempfile
 import uuid
@@ -454,3 +454,116 @@ def calculate(price):
         if our_feedback:
             assert our_feedback.action == "accepted"
             assert our_feedback.reason == "Test reason"
+
+
+class TestPatternLearningConfigIntegration:
+    """Test Phase 8: Config-based pattern learning enable/disable."""
+
+    def test_pattern_learning_disabled(self, temp_storage_dir):
+        """Test that pattern learning components are None when disabled."""
+        config = RefactronConfig(enable_pattern_learning=False)
+        refactron = Refactron(config)
+
+        assert refactron.pattern_storage is None
+        assert refactron.pattern_fingerprinter is None
+        assert refactron.pattern_learner is None
+        assert refactron.pattern_matcher is None
+        assert refactron.pattern_ranker is None
+
+    def test_pattern_learning_enabled(self, temp_storage_dir):
+        """Test that pattern learning components are initialized when enabled."""
+        config = RefactronConfig(
+            enable_pattern_learning=True,
+            pattern_storage_dir=temp_storage_dir,
+        )
+        refactron = Refactron(config)
+
+        assert refactron.pattern_storage is not None
+        assert refactron.pattern_fingerprinter is not None
+        assert refactron.pattern_matcher is not None
+
+    def test_pattern_learning_enabled_but_learning_disabled(self, temp_storage_dir):
+        """Test that learner is None when learning is disabled."""
+        config = RefactronConfig(
+            enable_pattern_learning=True,
+            pattern_learning_enabled=False,
+            pattern_storage_dir=temp_storage_dir,
+        )
+        refactron = Refactron(config)
+
+        assert refactron.pattern_storage is not None
+        assert refactron.pattern_fingerprinter is not None
+        assert refactron.pattern_matcher is not None
+        assert refactron.pattern_learner is None
+
+    def test_pattern_ranking_disabled(self, temp_storage_dir):
+        """Test that ranker is None when ranking is disabled."""
+        config = RefactronConfig(
+            enable_pattern_learning=True,
+            pattern_ranking_enabled=False,
+            pattern_storage_dir=temp_storage_dir,
+        )
+        refactron = Refactron(config)
+
+        assert refactron.pattern_storage is not None
+        assert refactron.pattern_fingerprinter is not None
+        assert refactron.pattern_matcher is not None
+        assert refactron.pattern_ranker is None
+
+    def test_record_feedback_respects_config(self, temp_storage_dir):
+        """Test that record_feedback respects enable_pattern_learning config."""
+        config = RefactronConfig(enable_pattern_learning=False)
+        refactron = Refactron(config)
+
+        operation = RefactoringOperation(
+            operation_type="extract_method",
+            file_path=Path("test.py"),
+            line_number=10,
+            description="Extract method",
+            old_code="def foo(): pass",
+            new_code="def bar(): pass",
+            risk_score=0.5,
+        )
+
+        # Should return early without error
+        refactron.record_feedback(
+            operation_id=operation.operation_id,
+            action="accepted",
+            operation=operation,
+        )
+
+        # Verify no storage was created
+        assert refactron.pattern_storage is None
+
+    def test_refactor_respects_ranking_config(self, temp_storage_dir):
+        """Test that refactor respects pattern_ranking_enabled config."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = Path(tmpdir) / "test.py"
+            test_file.write_text("def foo():\n    x = 100\n    return x\n")
+
+            # Ranking disabled
+            config = RefactronConfig(
+                enable_pattern_learning=True,
+                pattern_ranking_enabled=False,
+                pattern_storage_dir=temp_storage_dir,
+            )
+            refactron = Refactron(config)
+
+            result = refactron.refactor(test_file, preview=True)
+
+            # Operations should not have ranking_score when ranking is disabled
+            if result.operations:
+                for op in result.operations:
+                    assert "ranking_score" not in op.metadata
+
+    def test_custom_storage_dir(self, temp_storage_dir):
+        """Test that custom pattern_storage_dir is respected."""
+        custom_dir = temp_storage_dir / "custom_patterns"
+        config = RefactronConfig(
+            enable_pattern_learning=True,
+            pattern_storage_dir=custom_dir,
+        )
+        refactron = Refactron(config)
+
+        assert refactron.pattern_storage is not None
+        assert refactron.pattern_storage.storage_dir == custom_dir
