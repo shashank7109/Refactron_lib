@@ -127,15 +127,25 @@ class Refactron:
             self.pattern_storage = PatternStorage()
             self.pattern_fingerprinter = PatternFingerprinter()
             from refactron.patterns.learner import PatternLearner
+            from refactron.patterns.matcher import PatternMatcher
+            from refactron.patterns.ranker import RefactoringRanker
 
             self.pattern_learner = PatternLearner(
                 storage=self.pattern_storage, fingerprinter=self.pattern_fingerprinter
+            )
+            self.pattern_matcher = PatternMatcher(storage=self.pattern_storage)
+            self.pattern_ranker = RefactoringRanker(
+                storage=self.pattern_storage,
+                matcher=self.pattern_matcher,
+                fingerprinter=self.pattern_fingerprinter,
             )
         except Exception as e:
             logger.warning(f"Failed to initialize pattern learning system: {e}")
             self.pattern_storage = None
             self.pattern_fingerprinter = None
             self.pattern_learner = None
+            self.pattern_matcher = None
+            self.pattern_ranker = None
 
         self._initialize_analyzers()
         self._initialize_refactorers()
@@ -493,6 +503,33 @@ class Refactron:
             except Exception as e:
                 # Catch unexpected errors to ensure refactoring continues
                 logger.error(f"Unexpected error refactoring {file_path}: {e}", exc_info=True)
+
+        # Rank operations if pattern ranker is available
+        if result.operations and self.pattern_ranker:
+            try:
+                # Detect project root for project-specific ranking
+                project_path = None
+                if files:
+                    try:
+                        project_path = self.detect_project_root(files[0])
+                    except Exception as e:
+                        logger.debug(f"Failed to detect project root for ranking: {e}")
+
+                # Rank operations
+                ranked_operations = self.pattern_ranker.rank_operations(
+                    result.operations, project_path=project_path
+                )
+
+                # Update operations list with ranked order
+                result.operations = [op for op, _ in ranked_operations]
+
+                # Store ranking scores in operation metadata
+                for operation, score in ranked_operations:
+                    operation.metadata["ranking_score"] = score
+
+            except Exception as e:
+                # If ranking fails, continue with unranked operations
+                logger.debug(f"Failed to rank operations: {e}")
 
         return result
 

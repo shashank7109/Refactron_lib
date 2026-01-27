@@ -30,6 +30,22 @@ class RefactorResult:
         """Operations with risk score <= 0.3."""
         return [op for op in self.operations if op.risk_score <= 0.3]
 
+    def top_ranked_operations(self, top_n: int = 10) -> List[RefactoringOperation]:
+        """Get top N ranked operations by ranking score."""
+        ranked = [op for op in self.operations if "ranking_score" in op.metadata]
+        ranked.sort(key=lambda op: op.metadata.get("ranking_score", 0.0), reverse=True)
+        return ranked[:top_n]
+
+    def get_ranking_score(self, operation: RefactoringOperation) -> float:
+        """Get ranking score for an operation (0.0 if not ranked)."""
+        value = operation.metadata.get("ranking_score", 0.0)
+        if isinstance(value, (int, float)):
+            return float(value)
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
     def operations_by_file(self, file_path: Path) -> List[RefactoringOperation]:
         """Get operations for a specific file."""
         return [op for op in self.operations if op.file_path == file_path]
@@ -55,6 +71,9 @@ class RefactorResult:
             lines.append(f"Operation {i}: {op.operation_type}")
             lines.append(f"Location: {op.file_path}:{op.line_number}")
             lines.append(f"Risk Score: {op.risk_score:.2f}")
+            ranking_score = self.get_ranking_score(op)
+            if ranking_score > 0:
+                lines.append(f"Ranking Score: {ranking_score:.3f}")
             lines.append(f"Description: {op.description}")
 
             if op.reasoning:

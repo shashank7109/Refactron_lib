@@ -191,6 +191,53 @@ def calculate(price):
         finally:
             temp_path.unlink()
 
+    def test_refactor_ranks_operations_and_sets_scores(self):
+        """Test that refactor() ranks operations and sets ranking scores."""
+        config = RefactronConfig()
+        refactron = Refactron(config)
+
+        # If pattern ranker is not initialized, skip (environment-specific)
+        if not getattr(refactron, "pattern_ranker", None):
+            pytest.skip("Pattern ranker not initialized")
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write(
+                """
+def calculate_price(price):
+    if price > 1000:
+        return price * 0.15
+    return 0
+
+def process_order(order_id, customer_name, order_date, total_amount, discount_rate):
+    if total_amount > 100:
+        final_price = total_amount * (1 - discount_rate)
+    else:
+        final_price = total_amount
+    return final_price
+"""
+            )
+            temp_path = Path(f.name)
+
+        try:
+            result = refactron.refactor(temp_path, preview=True)
+
+            if not result.operations:
+                pytest.skip("No operations generated for test file")
+
+            scores = []
+            for op in result.operations:
+                score = op.metadata.get("ranking_score")
+                assert score is not None
+                assert isinstance(score, (int, float))
+                scores.append(float(score))
+
+            if len(scores) > 1:
+                assert all(
+                    scores[i] >= scores[i + 1] for i in range(len(scores) - 1)
+                ), "Operations should be sorted by ranking score in descending order"
+        finally:
+            temp_path.unlink()
+
     def test_refactor_generates_operation_ids(self):
         """Test that refactor() generates unique operation IDs."""
         config = RefactronConfig()
