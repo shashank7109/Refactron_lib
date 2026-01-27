@@ -12,6 +12,7 @@ from refactron.patterns.models import (
 )
 from refactron.patterns.ranker import RefactoringRanker
 from refactron.patterns.storage import PatternStorage
+from refactron.patterns.tuner import RuleTuner
 
 __all__ = [
     "PatternFingerprinter",
@@ -20,6 +21,7 @@ __all__ = [
     "PatternStorage",
     "LearningService",
     "RefactoringRanker",
+    "RuleTuner",
     "RefactoringFeedback",
     "RefactoringPattern",
     "PatternMetric",
