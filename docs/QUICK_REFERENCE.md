@@ -209,6 +209,7 @@ def my_function():  # refactron: ignore
 refactron --help
 refactron analyze --help
 refactron refactor --help
+refactron patterns --help  # Pattern analysis and tuning commands
 ```
 
 ## Resources
