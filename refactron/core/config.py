@@ -103,7 +103,7 @@ class RefactronConfig:
 
     # Logging and monitoring settings
     log_level: str = "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
-    log_format: str = "json"  # json or text
+    log_format: str = "text"  # json or text
     log_file: Optional[Path] = None  # If None, uses default location
     log_max_bytes: int = 10 * 1024 * 1024  # 10MB default
     log_backup_count: int = 5

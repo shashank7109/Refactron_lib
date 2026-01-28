@@ -90,7 +90,7 @@ def _auth_banner(title: str) -> None:
             style="panel.border",
             box=box.ROUNDED,
             padding=(1, 2),
-            subtitle="[secondary]v1.0.1[/secondary]",
+            subtitle="[secondary]v1.0.12[/secondary]",
             subtitle_align="right",
         )
     )
@@ -209,36 +209,34 @@ def _create_summary_table(summary: dict) -> Table:
         border_style="panel.border",
         expand=True,
     )
-    table.add_column("Metric", style="info")
-    table.add_column("Value", justify="right", style="highlight")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", justify="right", style="bold white")
 
     table.add_row("Files Found", str(summary["total_files"]))
     table.add_row("Files Analyzed", str(summary["files_analyzed"]))
     if summary.get("files_failed", 0) > 0:
-        table.add_row("Files Failed", str(summary["files_failed"]), style="error")
+        table.add_row("Files Failed", str(summary["files_failed"]), style="bold red")
 
     table.add_row(
         "Total Issues",
         str(summary["total_issues"]),
-        style="warning" if summary["total_issues"] > 0 else "success",
+        style="bold yellow" if summary["total_issues"] > 0 else "bold green",
     )
 
     if summary["critical"] > 0:
-        table.add_row("Critical", str(summary["critical"]), style="error bold")
+        table.add_row("Critical", str(summary["critical"]), style="bold red")
     else:
-        table.add_row("Critical", "0", style="secondary")
+        table.add_row("Critical", "0", style="dim")
 
     table.add_row(
-        "Errors", str(summary["errors"]), style="error" if summary["errors"] > 0 else "secondary"
+        "Errors", str(summary["errors"]), style="bold red" if summary["errors"] > 0 else "dim"
     )
     table.add_row(
         "Warnings",
         str(summary["warnings"]),
-        style="warning" if summary["warnings"] > 0 else "secondary",
+        style="bold yellow" if summary["warnings"] > 0 else "dim",
     )
-    table.add_row(
-        "Info", str(summary["info"]), style="info" if summary["info"] > 0 else "secondary"
-    )
+    table.add_row("Info", str(summary["info"]), style="cyan" if summary["info"] > 0 else "dim")
 
     return table
 
@@ -568,7 +566,7 @@ def _run_startup_animation() -> None:
             info_table.add_column(style="dim", justify="right")
             info_table.add_column(style="bold white")
 
-            info_table.add_row("Version:", "v1.0.1")
+            info_table.add_row("Version:", "v1.0.12")
             info_table.add_row("Python:", sys.version.split()[0])
             info_table.add_row("OS:", platform.system())
 
@@ -605,7 +603,7 @@ def _run_startup_animation() -> None:
     for line in LOGO_LINES:
         console.print(Align.center(Text(line, style="bold #ffffff")))
     console.print(Align.center(Text(subtitle_text, style="italic #8a8a8a")))
-    console.print(Align.center(Text("v1.0.1", style="dim")))
+    console.print(Align.center(Text("v1.0.12", style="dim")))
     console.print()
 
 
@@ -716,7 +714,7 @@ def _run_minimal_loop(ctx: click.Context) -> None:
             if choice == "1":
                 _print_custom_help(ctx)
             elif choice == "2":
-                console.print("\nRefactron CLI v1.0.1")
+                console.print("\nRefactron CLI v1.0.12")
             elif choice == "3":
                 console.print("Goodbye!")
                 break
@@ -727,7 +725,7 @@ def _run_minimal_loop(ctx: click.Context) -> None:
 
 
 @click.group(cls=CustomHelpGroup, invoke_without_command=True)
-@click.version_option(version="1.0.1")
+@click.version_option(version="1.0.12")
 @click.pass_context
 def main(ctx: click.Context) -> None:
     """
@@ -736,7 +734,7 @@ def main(ctx: click.Context) -> None:
     Analyze, refactor, and optimize your Python code with ease.
     """
     # Check authentication for all commands except login/logout
-    exempt_commands = ["login", "logout"]
+    exempt_commands = ["login", "logout", "auth"]
 
     if ctx.invoked_subcommand not in exempt_commands:
         creds = load_credentials()

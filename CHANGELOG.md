@@ -5,7 +5,40 @@ All notable changes to Refactron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.12] - 2026-01-29
+
+### Added
+
+#### Pattern Learning System
+- **Pattern Learning Engine** - Foundation for identifying and learning project-specific refactoring patterns.
+- **Project-Specific Rule Tuner** - CLI commands to tune refactoring rules based on project needs.
+- **Suggestion Ranking System** - Intelligent ranking of refactoring suggestions based on risk and impact.
+- **Feedback Collection System** - Interactive feedback loop to improve pattern recognition over time.
+
+#### CLI Enhancements
+- **Enhanced Welcome Flow** - Sleek startup animation with system checks and rotating quick tips.
+- **Interactive Dashboard** - Minimal "Info Center" for quick access to help and version information.
+- **Custom Help Formatter** - Beautifully formatted, numbered help output for better command discovery.
+- **Authentication Enforcement** - Mandatory authentication for all core commands (analyze, refactor, etc.).
+
+#### Performance & Reliability
+- **AST Cache & Incremental Analysis** - Faster analysis by only processing changed files.
+- **Parallel Processing** - Multi-threaded analysis for large codebases.
+- **Backup & Rollback System** - Git-integrated safety system to undo refactoring changes.
+- **Enhanced Error Handling** - Custom exceptions and graceful degradation for a more robust experience.
+
+#### Configuration & Integration
+- **Advanced Configuration Management** - Support for profiles, validation, and project-specific settings.
+- **CI/CD Integration Templates** - Pre-configured templates for GitHub Actions and other CI/CD platforms.
+- **Prometheus Metrics** - Built-in support for exporting metrics to Prometheus.
+
+### Fixed
+- Resolved numerous linting and type-checking issues across the codebase.
+- Improved Python 3.8 compatibility with explicit type hints.
+- Optimized project type detection for large codebases.
+- Fixed critical issues in feedback persistence and test isolation.
+
+---
 
 ### Planned
 - AI-powered pattern recognition

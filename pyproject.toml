@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "refactron"
-version = "1.0.1"
+version = "1.0.12"
 description = "Python code analysis and refactoring tool with security scanning, performance detection, and automated fixes"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Om Sherikar", email = "omsherikar@example.com"}
+    {name = "Om Sherikar", email = "omsherikar0229@gmail.com"}
 ]
 keywords = ["refactoring", "code-quality", "static-analysis", "code-optimization", "technical-debt", "code-review", "security-analysis"]
 classifiers = [
@@ -47,8 +47,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://refactron.us.kg"
-Documentation = "https://refactron-ai.github.io/Refactron_lib/"
+Homepage = "https://refactron.dev"
+Documentation = "https://docs.refactron.dev"
 Repository = "https://github.com/Refactron-ai/Refactron_lib"
 "Bug Tracker" = "https://github.com/Refactron-ai/Refactron_lib/issues"
 

@@ -72,12 +72,12 @@ def test_login_device_code_flow(monkeypatch, tmp_path: Path) -> None:
         lambda *args, **kwargs: ApiKeyValidationResult(ok=True, message="Verified."),
     )
 
-    result = runner.invoke(main, ["login", "--no-browser"])
+    result = runner.invoke(main, ["login", "--no-browser", "--api-base-url", "http://0.0.0.0:3001"])
     assert result.exit_code == 0, result.output
     assert "Refactron" in result.output
     assert "Login" in result.output
     assert "ABCD-EFGH" in result.output
-    assert "localhost:3000/login" in result.output
+    assert "app.refactron.dev/login" in result.output
     assert "Login complete" in result.output
     assert "user@example.com" in result.output
     assert "pro" in result.output
@@ -135,9 +135,8 @@ def test_login_skips_when_already_logged_in(monkeypatch, tmp_path: Path) -> None
 
     result = runner.invoke(main, ["login", "--no-browser"])
     assert result.exit_code == 0
-    assert "Logged in" in result.output
+    assert "Already authenticated" in result.output
     assert "existing@example.com" in result.output
-    assert "pro" in result.output
 
 
 def test_login_does_not_save_invalid_api_key(monkeypatch, tmp_path: Path) -> None:

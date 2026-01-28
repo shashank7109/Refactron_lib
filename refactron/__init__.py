@@ -9,7 +9,7 @@ from refactron.core.exceptions import AnalysisError, ConfigError, RefactoringErr
 from refactron.core.refactor_result import RefactorResult
 from refactron.core.refactron import Refactron
 
-__version__ = "1.0.1"
+__version__ = "1.0.12"
 __author__ = "Om Sherikar"
 
 __all__ = [
