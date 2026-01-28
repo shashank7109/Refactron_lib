@@ -8,6 +8,22 @@ from pathlib import Path
 import pytest
 
 from refactron.core.backup import BackupManager, BackupRollbackSystem, GitIntegration
+from refactron.core.credentials import RefactronCredentials
+
+
+@pytest.fixture(autouse=True)
+def mock_auth(monkeypatch):
+    """Mock authentication for all CLI tests."""
+    fake_creds = RefactronCredentials(
+        api_base_url="https://api.refactron.dev",
+        access_token="fake-token",
+        token_type="Bearer",
+        expires_at=None,
+        email="test@example.com",
+        plan="pro",
+        api_key="ref_FAKE",
+    )
+    monkeypatch.setattr("refactron.cli.load_credentials", lambda: fake_creds)
 
 
 class TestBackupManager:
