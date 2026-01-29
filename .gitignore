@@ -138,3 +138,7 @@ benchmarks/benchmark_history.json
 refactron_ast_cache/
 refactron_incremental_state.json
 .refactron/
+
+# Exclude analysis files
+DIRECTORY_ANALYSIS.md
+FEATURES.md
