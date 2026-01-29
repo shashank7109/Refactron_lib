@@ -22,7 +22,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.theme import Theme
 
-from refactron import Refactron
+from refactron import Refactron, __version__
 from refactron.autofix.engine import AutoFixEngine
 from refactron.autofix.models import FixRiskLevel
 from refactron.core.analysis_result import AnalysisResult
@@ -725,7 +725,7 @@ def _run_minimal_loop(ctx: click.Context) -> None:
 
 
 @click.group(cls=CustomHelpGroup, invoke_without_command=True)
-@click.version_option(version="1.0.12")
+@click.version_option(version=__version__)
 @click.pass_context
 def main(ctx: click.Context) -> None:
     """

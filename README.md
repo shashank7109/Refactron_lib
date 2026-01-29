@@ -15,27 +15,34 @@ Refactron analyzes Python code for security vulnerabilities, performance issues,
 
 ### Code Analysis
 
-- Security scanning: SQL injection, code injection, hardcoded secrets, SSRF vulnerabilities
-- Code quality: magic numbers, long functions, excessive parameters, deep nesting
-- Complexity metrics: cyclomatic complexity, maintainability index, nested loops
-- Type hints: missing or incomplete annotations
-- Dead code detection: unused functions and unreachable code
-- Dependency analysis: circular imports, wildcard imports
-- Performance issues: N+1 queries, inefficient iterations
+- **Security scanning**: SQL injection, code injection, hardcoded secrets, SSRF vulnerabilities
+- **Code quality**: magic numbers, long functions, excessive parameters, deep nesting
+- **Complexity metrics**: cyclomatic complexity, maintainability index, nested loops
+- **Type hints**: missing or incomplete annotations
+- **Dead code detection**: unused functions and unreachable code
+- **Dependency analysis**: circular imports, wildcard imports
+- **Performance issues**: N+1 queries, inefficient iterations
 
-### Refactoring
+### Pattern Learning System
 
-- Extract constants, simplify conditionals, reduce parameters
-- Add docstrings, extract methods
-- Preview changes before applying
-- Risk scoring for each refactoring
-- **Pattern Learning** - Learns from your feedback to improve suggestions over time
+Refactron now learns from your project-specific coding standards.
+- **Pattern Learning Engine**: Identifies and learns project-specific refactoring patterns.
+- **Intelligent Ranking**: Ranks suggestions based on risk and potential impact.
+- **Feedback Loop**: Improves accuracy over time based on your feedback.
 
-### Auto-Fix
+### Performance & Scalability
 
-- 14 automated fixers for common issues
-- Configurable safety levels
-- Automatic backups and rollback support
+Optimized for large-scale codebases.
+- **AST Cache**: Blazing fast repeated analysis.
+- **Incremental Analysis**: Only process files modified since the last run.
+- **Parallel Processing**: Multi-threaded execution for maximum speed.
+
+### Refactoring & Auto-Fix
+
+- **Extract constants**, simplify conditionals, reduce parameters, add docstrings, extract methods.
+- **14 automated fixers** for common issues with configurable safety levels.
+- **Preview changes** before applying with risk scoring.
+- **Backup & Rollback**: Git-integrated safety system to undo changes.
 
 ## Installation
 
@@ -44,6 +51,31 @@ pip install refactron
 ```
 
 ## Usage
+
+### Command Line
+
+Refactron features a modern, interactive CLI.
+
+```bash
+# Log in to Refactron
+refactron login
+
+# Analyze code (requires authentication)
+refactron analyze myproject/
+
+# Generate report
+refactron report myproject/ --format json -o report.json
+
+# Preview refactoring suggestions
+refactron refactor myfile.py --preview
+
+# Auto-fix issues
+refactron autofix myfile.py --apply
+
+# Rollback changes
+refactron rollback --list
+refactron rollback --session <id>
+```
 
 ### Python API
 
@@ -58,25 +90,9 @@ result = refactron.refactor("path/to/code.py", preview=True)
 result.show_diff()
 ```
 
-### Command Line
-
-```bash
-# Analyze code
-refactron analyze myproject/
-
-# Generate report
-refactron report myproject/ --format json -o report.json
-
-# Preview refactoring suggestions
-refactron refactor myfile.py --preview
-
-# Auto-fix issues
-refactron autofix myfile.py --preview
-refactron autofix myfile.py --apply
-```
-
 ## Documentation
 
+- [Pattern Learning Guide](docs/PATTERN_LEARNING.md)
 - [Quick Reference](docs/QUICK_REFERENCE.md)
 - [Tutorial](docs/TUTORIAL.md)
 - [Architecture](ARCHITECTURE.md)
@@ -84,11 +100,12 @@ refactron autofix myfile.py --apply
 
 ## Development Status
 
+
 Stable release (v1.0.13). Tested on Python 3.8-3.12.
 
-- 135 tests, 84% code coverage
-- 96.8% analyzer module coverage
-- Validated on 5,800+ lines of production code
+- 669 tests, 78% code coverage
+- Validated on 10,000+ lines of production code
+- CI/CD ready with GitHub Actions and GitLab CI templates
 
 ## Contributing
 
@@ -97,7 +114,7 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 ```bash
 git clone https://github.com/Refactron-ai/Refactron_lib.git
 cd Refactron_lib
-bash setup_dev.sh  # or setup_dev.bat on Windows
+bash setup_dev.sh
 ```
 
 ## Security
