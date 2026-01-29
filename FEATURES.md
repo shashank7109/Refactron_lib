@@ -782,6 +782,3 @@ Refactron is perfect for:
 **Refactron - Making Python code better, one refactoring at a time!** 🚀
 
 **Now with Pattern Learning** - The more you use Refactron, the smarter it gets! 🧠
-
-
-
