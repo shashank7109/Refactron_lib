@@ -5,7 +5,13 @@ All notable changes to Refactron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.13] - 2026-01-29
+## [1.0.14] - 2026-01-30
+
+### Changed
+- Refactored CLI startup sequence to display animation before authentication prompt.
+- Improved dependency management (added `astroid`).
+
+## [1.0.13] - 2026-01-30
 
 ### Added
 

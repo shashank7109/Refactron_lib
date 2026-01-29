@@ -103,7 +103,7 @@ result.show_diff()
 ## Development Status
 
 
-Stable release (v1.0.13). Tested on Python 3.8-3.12.
+Stable release (v1.0.14). Tested on Python 3.8-3.12.
 
 - 669 tests, 78% code coverage
 - Validated on 10,000+ lines of production code

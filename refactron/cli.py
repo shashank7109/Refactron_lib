@@ -90,7 +90,7 @@ def _auth_banner(title: str) -> None:
             style="panel.border",
             box=box.ROUNDED,
             padding=(1, 2),
-            subtitle="[secondary]v1.0.13[/secondary]",
+            subtitle="[secondary]v1.0.14[/secondary]",
             subtitle_align="right",
         )
     )
@@ -736,45 +736,54 @@ def main(ctx: click.Context) -> None:
     # Check authentication for all commands except login/logout
     exempt_commands = ["login", "logout", "auth"]
 
-    if ctx.invoked_subcommand not in exempt_commands:
-        creds = load_credentials()
-        is_authenticated = False
-        if creds and creds.access_token:
-            now = datetime.now(timezone.utc)
-            if not creds.expires_at or creds.expires_at > now:
-                is_authenticated = True
+    # 1. Pre-check authentication status
+    creds = load_credentials()
+    is_authenticated = False
+    if creds and creds.access_token:
+        now = datetime.now(timezone.utc)
+        if not creds.expires_at or creds.expires_at > now:
+            is_authenticated = True
+
+    # 2. Show animation if dashboard mode OR if auth is required and missing
+    should_show_animation = ctx.invoked_subcommand is None or (
+        ctx.invoked_subcommand not in exempt_commands and not is_authenticated
+    )
+
+    if should_show_animation:
+        _run_startup_animation()
+
+    # 3. Handle authentication requirement
+    if ctx.invoked_subcommand not in exempt_commands and not is_authenticated:
+        # If it's a subcommand, we might want a slightly different message
+        if ctx.invoked_subcommand:
+            console.print(
+                f"\n[yellow]Authentication required to run '{ctx.invoked_subcommand}'[/yellow]"
+            )
+        else:
+            console.print(Align.center(Text("\nAuthentication Required", style="bold")))
+
+        if Prompt.ask("\nLog in to continue?", choices=["y", "n"], default="y") == "y":
+            try:
+                ctx.invoke(
+                    login,
+                    api_base_url=DEFAULT_API_BASE_URL,
+                    no_browser=False,
+                    timeout=300,
+                    force=False,
+                )
+                # Re-check credentials
+                creds = load_credentials()
+                if creds and creds.access_token:
+                    is_authenticated = True
+            except SystemExit:
+                pass
 
         if not is_authenticated:
-            # If it's a subcommand, we might want a slightly different message
-            if ctx.invoked_subcommand:
-                console.print(
-                    f"\n[yellow]Authentication required to run '{ctx.invoked_subcommand}'[/yellow]"
-                )
-            else:
-                console.print(Align.center(Text("\nAuthentication Required", style="bold")))
+            console.print("[dim]Exiting...[/dim]")
+            raise SystemExit(1)
 
-            if Prompt.ask("\nLog in to continue?", choices=["y", "n"], default="y") == "y":
-                try:
-                    ctx.invoke(
-                        login,
-                        api_base_url=DEFAULT_API_BASE_URL,
-                        no_browser=False,
-                        timeout=300,
-                        force=False,
-                    )
-                    # Re-check credentials
-                    creds = load_credentials()
-                    if creds and creds.access_token:
-                        is_authenticated = True
-                except SystemExit:
-                    pass
-
-            if not is_authenticated:
-                console.print("[dim]Exiting...[/dim]")
-                raise SystemExit(1)
-
+    # 4. Handle default command (interactive dashboard)
     if ctx.invoked_subcommand is None:
-        _run_startup_animation()
         _run_minimal_loop(ctx)
     pass
 
