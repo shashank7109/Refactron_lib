@@ -11,7 +11,7 @@ A Python library for code analysis and refactoring.
 
 Refactron analyzes Python code for security vulnerabilities, performance issues, code smells, and complexity problems. It provides refactoring suggestions with safety previews and supports automated code fixes.
 
-![Refactron CLI Dashboard](docs/images/cli_dashboard.png)
+![Refactron CLI Dashboard](https://github.com/Refactron-ai/Refactron_lib/blob/main/docs/images/Screenshot%202026-01-29%20at%2017.45.00.png)
 
 ## Features
 
