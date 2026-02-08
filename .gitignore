@@ -142,3 +142,10 @@ refactron_incremental_state.json
 # Exclude analysis files
 DIRECTORY_ANALYSIS.md
 FEATURES.md
+
+# Test repository artifacts (generated during testing)
+complex_test_repo/.rag/
+complex_test_repo/.refactron.yaml
+complex_test_repo/utils/math_lib_doc.md
+feedback_analysis.json
+verify_full_ecosystem.py
