@@ -65,7 +65,7 @@ class CodeParser:
         except TypeError:
             # Newer API doesn't need name parameter
             PY_LANGUAGE = Language(tspython.language())
-        
+
         self.parser = Parser(PY_LANGUAGE)
 
     def parse_file(self, file_path: Path) -> ParsedFile:

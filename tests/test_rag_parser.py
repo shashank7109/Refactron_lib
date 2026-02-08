@@ -19,7 +19,7 @@ class TestCodeParser:
     @pytest.fixture
     def temp_python_file(self):
         """Create a temporary Python file for testing."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             content = '''"""Module docstring for testing."""
 
 import os
@@ -47,9 +47,9 @@ class TestClass:
 '''
             f.write(content)
             temp_path = Path(f.name)
-        
+
         yield temp_path
-        
+
         # Cleanup
         temp_path.unlink()
 
@@ -61,15 +61,15 @@ class TestClass:
     def test_parse_file_basic(self, parser, temp_python_file):
         """Test parsing a basic Python file."""
         parsed = parser.parse_file(temp_python_file)
-        
+
         assert isinstance(parsed, ParsedFile)
         assert parsed.file_path == str(temp_python_file)
         assert parsed.module_docstring == "Module docstring for testing."
-        
+
     def test_extract_imports(self, parser, temp_python_file):
         """Test that imports are extracted correctly."""
         parsed = parser.parse_file(temp_python_file)
-        
+
         assert len(parsed.imports) == 3
         assert "import os" in parsed.imports
         assert "import sys" in parsed.imports
@@ -78,16 +78,16 @@ class TestClass:
     def test_extract_functions(self, parser, temp_python_file):
         """Test that functions are extracted correctly."""
         parsed = parser.parse_file(temp_python_file)
-        
+
         assert len(parsed.functions) == 2
-        
+
         # Check first function
         func1 = parsed.functions[0]
         assert isinstance(func1, ParsedFunction)
         assert func1.name == "simple_function"
         assert func1.docstring == "Add two numbers."
         assert len(func1.params) >= 2  # Should have x and y
-        
+
         # Check second function
         func2 = parsed.functions[1]
         assert func2.name == "another_function"
@@ -95,15 +95,15 @@ class TestClass:
     def test_extract_classes(self, parser, temp_python_file):
         """Test that classes are extracted correctly."""
         parsed = parser.parse_file(temp_python_file)
-        
+
         assert len(parsed.classes) == 1
-        
+
         # Check class
         cls = parsed.classes[0]
         assert isinstance(cls, ParsedClass)
         assert cls.name == "TestClass"
         assert cls.docstring == "A test class."
-        
+
         # Check methods
         assert len(cls.methods) == 2
         assert cls.methods[0].name == "method_one"
@@ -116,10 +116,10 @@ class TestClass:
 
     def test_parse_empty_file(self, parser):
         """Test parsing an empty Python file."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("")
             temp_path = Path(f.name)
-        
+
         try:
             parsed = parser.parse_file(temp_path)
             assert parsed.module_docstring is None
@@ -132,7 +132,7 @@ class TestClass:
     def test_function_line_ranges(self, parser, temp_python_file):
         """Test that line ranges are captured correctly."""
         parsed = parser.parse_file(temp_python_file)
-        
+
         for func in parsed.functions:
             assert func.line_range[0] > 0
             assert func.line_range[1] >= func.line_range[0]
@@ -140,7 +140,7 @@ class TestClass:
     def test_class_methods_have_correct_metadata(self, parser, temp_python_file):
         """Test that class methods preserve metadata."""
         parsed = parser.parse_file(temp_python_file)
-        
+
         test_class = parsed.classes[0]
         for method in test_class.methods:
             assert method.name in ["method_one", "method_two"]

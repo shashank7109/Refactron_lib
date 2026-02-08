@@ -30,12 +30,12 @@ def test_backend_client_generate(mock_post, mock_credentials):
     mock_response.status_code = 200
     mock_response.json.return_value = {"content": "Suggested code"}
     mock_post.return_value = mock_response
-    
+
     client = BackendLLMClient(backend_url="http://test-backend:3000")
     result = client.generate(prompt="Refactor this", system="You are an expert")
-    
+
     assert result == "Suggested code"
-    
+
     # Verify request
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
@@ -52,9 +52,11 @@ def test_backend_client_error_handling(mock_post, mock_credentials):
     mock_response.status_code = 500
     mock_response.text = "Internal Server Error"
     mock_post.return_value = mock_response
-    
+
     client = BackendLLMClient()
-    with pytest.raises(RuntimeError, match="Backend LLM proxy error \(500\): Internal Server Error"):
+    with pytest.raises(
+        RuntimeError, match="Backend LLM proxy error \(500\): Internal Server Error"
+    ):
         client.generate(prompt="Refactor this")
 
 
@@ -64,10 +66,10 @@ def test_backend_client_check_health(mock_get):
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_get.return_value = mock_response
-    
+
     client = BackendLLMClient()
     assert client.check_health() is True
-    
+
     # Mock unhealthy response
     mock_response.status_code = 503
     assert client.check_health() is False

@@ -211,13 +211,13 @@ class WorkspaceManager:
                     # Extract repo name from URL
                     # HTTPS: https://github.com/user/repo.git
                     # SSH: git@github.com:user/repo.git
-                    
+
                     # Handle SSH GitHub URLs explicitly (SCP-like syntax)
                     if url.startswith("git@github.com:"):
                         repo_path = url.replace("git@github.com:", "", 1).replace(".git", "")
                         if repo_path:
                             return repo_path
-                    
+
                     # Handle HTTPS/HTTP GitHub URLs with proper parsing
                     elif "://" in url:
                         try:
