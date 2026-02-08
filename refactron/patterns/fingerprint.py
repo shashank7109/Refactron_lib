@@ -28,9 +28,10 @@ class PatternFingerprinter:
             return self._hash_algo(b"").hexdigest()
 
         # Optimize: Parse AST once, extract both normalized code and pattern
-        normalized = self._normalize_code(code_snippet)
+        # Anonymize identifiers to allow structural generalization
+        anonymized = self._anonymize_code(code_snippet)
         ast_pattern = self._extract_ast_pattern(code_snippet)
-        combined = f"{normalized}\n{ast_pattern}".encode("utf-8")
+        combined = f"{anonymized}\n{ast_pattern}".encode("utf-8")
         return self._hash_algo(combined).hexdigest()
 
     def fingerprint_issue_context(
@@ -70,8 +71,9 @@ class PatternFingerprinter:
             SHA256 hash of the normalized refactoring pattern
         """
         # Combine old_code pattern + operation_type for unique identification
-        normalized_old = self._normalize_code(operation.old_code)
-        operation_key = f"{operation.operation_type}:{normalized_old}"
+        # Use anonymization to group similar structural refactorings
+        anonymized_old = self._anonymize_code(operation.old_code)
+        operation_key = f"{operation.operation_type}:{anonymized_old}"
         combined = operation_key.encode("utf-8")
 
         return self._hash_algo(combined).hexdigest()
@@ -149,9 +151,9 @@ class PatternFingerprinter:
 
                 # Extract key structural elements
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    pattern_parts.append(f"FUNC:{node.name}")
+                    pattern_parts.append("FUNC")
                 elif isinstance(node, ast.ClassDef):
-                    pattern_parts.append(f"CLASS:{node.name}")
+                    pattern_parts.append("CLASS")
                 elif isinstance(node, ast.If):
                     pattern_parts.append("IF")
                 elif isinstance(node, ast.For):
@@ -176,3 +178,43 @@ class PatternFingerprinter:
         except (SyntaxError, ValueError):
             # If code is invalid, return empty pattern
             return ""
+
+    def _anonymize_code(self, code: str) -> str:
+        """
+        Normalize and anonymize identifiers to help patterns generalize.
+
+        Replaces specific function/variable names with generic tokens.
+        """
+        try:
+            tree = ast.parse(code)
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Name):
+                    node.id = "VAR"
+                elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    node.name = "FUNC"
+                elif isinstance(node, ast.ClassDef):
+                    node.name = "CLASS"
+                elif isinstance(node, ast.Attribute):
+                    node.attr = "ATTR"
+                elif isinstance(node, ast.arg):
+                    node.arg = "ARG"
+                elif isinstance(node, ast.Constant):
+                    # Anonymize all literals (numbers, strings, etc)
+                    node.value = "CONST"
+                elif isinstance(node, ast.JoinedStr):
+                    # Anonymize f-strings by replacing constant parts
+                    for i, value in enumerate(node.values):
+                        if isinstance(value, ast.Constant):
+                            node.values[i] = ast.Constant(value="STR")
+
+            # Using ast.unparse if available (Python 3.9+)
+            if hasattr(ast, "unparse"):
+                return self._normalize_code(ast.unparse(tree))
+
+            # Fallback to standard normalization if unparse is not available
+            return self._normalize_code(code)
+
+        except (SyntaxError, ValueError):
+            # If AST parsing fails, fallback to basic normalization
+            return self._normalize_code(code)

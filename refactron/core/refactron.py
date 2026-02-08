@@ -246,7 +246,7 @@ class Refactron:
         if target_path.is_file():
             files = [target_path]
         else:
-            files = self._get_python_files(target_path)
+            files = self.get_python_files(target_path)
 
         # Apply incremental analysis filtering
         if self.incremental_tracker.enabled:
@@ -513,7 +513,7 @@ class Refactron:
         if target_path.is_file():
             files = [target_path]
         else:
-            files = self._get_python_files(target_path)
+            files = self.get_python_files(target_path)
 
         result = RefactorResult(preview_mode=preview)
 
@@ -621,7 +621,7 @@ class Refactron:
 
         return operations
 
-    def _get_python_files(self, directory: Path) -> List[Path]:
+    def get_python_files(self, directory: Path) -> List[Path]:
         """Get all Python files in a directory, respecting exclude patterns."""
         python_files = []
 
@@ -779,7 +779,14 @@ class Refactron:
         current = file_path.parent.resolve()
 
         # Common project markers
-        markers = [".git", "setup.py", "pyproject.toml", "setup.cfg", ".refactron"]
+        markers = [
+            ".git",
+            "setup.py",
+            "pyproject.toml",
+            "setup.cfg",
+            ".refactron",
+            ".refactron.yaml",
+        ]
 
         for _ in range(10):  # Limit search depth
             for marker in markers:

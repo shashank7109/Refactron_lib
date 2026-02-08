@@ -29,6 +29,7 @@ class IssueCategory(Enum):
     MODERNIZATION = "modernization"
     DEPENDENCY = "dependency"
     DEAD_CODE = "dead_code"
+    DOCUMENTATION = "documentation"
 
 
 @dataclass

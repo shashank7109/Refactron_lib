@@ -222,7 +222,7 @@ def run_command(cmd):
 
         issues = analyzer.analyze(Path("myapp/utils.py"), code)
         # shell=True has high confidence (0.95), should be kept
-        assert len([i for i in issues if i.rule_id == "SEC005"]) > 0
+        assert len([i for i in issues if i.rule_id == "SEC0052"]) > 0
 
     def test_default_min_confidence(self):
         """Default minimum confidence should be 0.5."""
@@ -345,4 +345,4 @@ def run(cmd):
         dangerous_issues = analyzer.analyze(Path("myapp/runner.py"), dangerous_code)
         # shell=True has high confidence, should be reported
         assert len(dangerous_issues) > 0
-        assert any(i.rule_id == "SEC005" for i in dangerous_issues)
+        assert any(i.rule_id == "SEC0052" for i in dangerous_issues)

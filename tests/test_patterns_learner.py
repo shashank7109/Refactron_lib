@@ -228,8 +228,10 @@ class TestPatternLearner:
             stats = learner.batch_learn(operations_with_feedback)
 
             assert stats["processed"] == 3
-            assert stats["created"] == 3  # Each has unique pattern
-            assert stats["updated"] == 0
+            # Anonymization makes structurally identical code produce the same hash
+            # so all 3 will update the same pattern (1 created, 2 updated)
+            assert stats["created"] == 1
+            assert stats["updated"] == 2
             assert stats["failed"] == 0
 
     def test_batch_learn_with_none_list(self):

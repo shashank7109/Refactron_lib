@@ -66,6 +66,7 @@ class RefactronConfig:
             "**/venv/**",
             "**/env/**",
             "**/.git/**",
+            "**/.refactron-backup/**",
         ]
     )
 

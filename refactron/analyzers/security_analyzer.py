@@ -3,7 +3,7 @@
 import ast
 import fnmatch
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from refactron.analyzers.base_analyzer import BaseAnalyzer
 from refactron.core.models import CodeIssue, IssueCategory, IssueLevel
@@ -24,6 +24,8 @@ class SecurityAnalyzer(BaseAnalyzer):
         "compile": "Potential code injection - use with extreme caution",
         "__import__": "Dynamic imports can be dangerous - use importlib instead",
         "input": "In Python 2, input() evaluates code - use raw_input() or upgrade to Python 3",
+        "system": "Command injection risk - uses a shell. Use subprocess.run() instead",
+        "popen": "Command injection risk - uses a shell. Use subprocess.Popen() with a list instead",  # noqa: E501
     }
 
     # Dangerous modules
@@ -125,6 +127,9 @@ class SecurityAnalyzer(BaseAnalyzer):
         try:
             tree = ast.parse(source_code)
 
+            # Map of local names to full module/function paths (alias tracking)
+            self._alias_map = self._build_alias_map(tree)
+
             # Check for various security issues
             issues.extend(self._check_dangerous_functions(tree, file_path))
             issues.extend(self._check_dangerous_imports(tree, file_path))
@@ -139,8 +144,20 @@ class SecurityAnalyzer(BaseAnalyzer):
             issues.extend(self._check_insecure_random(tree, file_path))
             issues.extend(self._check_weak_ssl_tls(tree, file_path))
 
-        except SyntaxError:
-            pass
+        except SyntaxError as e:
+            # Report syntax errors as security risks
+            issues.append(
+                CodeIssue(
+                    category=IssueCategory.SECURITY,
+                    level=IssueLevel.ERROR,
+                    message=f"Syntax error prevents security analysis: {str(e)}",
+                    file_path=file_path,
+                    line_number=getattr(e, "lineno", 1),
+                    suggestion="Fix the syntax error to enable automated security scanning.",
+                    rule_id="SEC000",
+                    confidence=1.0,
+                )
+            )
 
         # Filter out whitelisted rules and low confidence issues
         filtered_issues = []
@@ -154,6 +171,21 @@ class SecurityAnalyzer(BaseAnalyzer):
             filtered_issues.append(issue)
 
         return filtered_issues
+
+    def _build_alias_map(self, tree: ast.AST) -> Dict[str, str]:
+        """Build a map of local names to their full qualified names (alias tracking)."""
+        aliases = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.asname:
+                        aliases[alias.asname] = alias.name
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                for alias in node.names:
+                    local_name = alias.asname if alias.asname else alias.name
+                    if local_name != "*":
+                        aliases[local_name] = f"{node.module}.{alias.name}"
+        return aliases
 
     def _check_dangerous_functions(self, tree: ast.AST, file_path: Path) -> List[CodeIssue]:
         """Check for dangerous built-in functions."""
@@ -351,33 +383,60 @@ class SecurityAnalyzer(BaseAnalyzer):
         """Check for command injection vulnerabilities."""
         issues = []
 
-        dangerous_calls = ["os.system", "subprocess.call", "subprocess.Popen", "os.popen"]
+        # Functions that always use a shell and are dangerous
+        always_shell = ["os.system", "os.popen", "system", "popen"]
+        # Functions that are dangerous specifically when shell=True is passed
+        shell_optional = [
+            "subprocess.call",
+            "subprocess.Popen",
+            "subprocess.run",
+            "subprocess.check_call",
+            "subprocess.check_output",
+        ]
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
                 func_name = self._get_full_function_name(node.func)
 
-                if any(dangerous in func_name for dangerous in dangerous_calls):
-                    # Check if shell=True is used
+                # Check for "always shell" functions
+                if any(
+                    dangerous == func_name or func_name.endswith(f".{dangerous}")
+                    for dangerous in always_shell
+                ):
+                    issue = CodeIssue(
+                        category=IssueCategory.SECURITY,
+                        level=IssueLevel.CRITICAL,
+                        message=f"Command injection risk: {func_name}() uses a shell",
+                        file_path=file_path,
+                        line_number=node.lineno,
+                        suggestion="Avoid functions that use a shell. Use subprocess.run() with a list of arguments instead.",  # noqa: E501
+                        rule_id="SEC0051",
+                        confidence=0.95,
+                    )
+                    issues.append(issue)
+                    continue
+
+                # Check for "shell=True" in optional functions
+                if any(dangerous in func_name for dangerous in shell_optional):
+                    is_shell_true = False
                     for keyword in node.keywords:
                         if keyword.arg == "shell" and isinstance(keyword.value, ast.Constant):
                             if keyword.value.value is True:
-                                issue = CodeIssue(
-                                    category=IssueCategory.SECURITY,
-                                    level=IssueLevel.CRITICAL,
-                                    message=(
-                                        f"Command injection risk: {func_name}() with shell=True"
-                                    ),
-                                    file_path=file_path,
-                                    line_number=node.lineno,
-                                    suggestion=(
-                                        "Avoid shell=True. Use subprocess with list of arguments "
-                                        "instead"
-                                    ),
-                                    rule_id="SEC005",
-                                    confidence=0.95,
-                                )
-                                issues.append(issue)
+                                is_shell_true = True
+                                break
+
+                    if is_shell_true:
+                        issue = CodeIssue(
+                            category=IssueCategory.SECURITY,
+                            level=IssueLevel.CRITICAL,
+                            message=f"Command injection risk: {func_name}() with shell=True",
+                            file_path=file_path,
+                            line_number=node.lineno,
+                            suggestion="Avoid shell=True. Use subprocess with list of arguments instead.",  # noqa: E501
+                            rule_id="SEC0052",
+                            confidence=0.95,
+                        )
+                        issues.append(issue)
 
         return issues
 
@@ -462,13 +521,16 @@ class SecurityAnalyzer(BaseAnalyzer):
         return ""
 
     def _get_full_function_name(self, node: ast.AST) -> str:
-        """Get full qualified function name (e.g., 'os.system')."""
+        """Get full qualified function name (e.g., 'os.system'), resolving aliases."""
         if isinstance(node, ast.Name):
-            return node.id
+            # Resolve alias if it exists
+            return self._alias_map.get(node.id, node.id)
         elif isinstance(node, ast.Attribute):
             value_name = self._get_full_function_name(node.value)
             if value_name:
-                return f"{value_name}.{node.attr}"
+                full_name = f"{value_name}.{node.attr}"
+                # Check for secondary aliases (e.g., 'o.system' where 'o' is 'os')
+                return self._alias_map.get(full_name, full_name)
             return node.attr
         return ""
 
@@ -483,13 +545,15 @@ class SecurityAnalyzer(BaseAnalyzer):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
                     if isinstance(target, ast.Name):
-                        # Check if the assignment uses string concatenation or .format()
+                        # Check if the assignment uses string concatenation, f-strings, or .format()
                         if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Add):
                             # Check if at least one side is a string
                             if isinstance(node.value.left, ast.Constant) or isinstance(
                                 node.value.right, ast.Constant
                             ):
                                 string_concat_vars[target.id] = node.lineno
+                        elif isinstance(node.value, ast.JoinedStr):  # f-string
+                            string_concat_vars[target.id] = node.lineno
                         elif isinstance(node.value, ast.Call) and isinstance(
                             node.value.func, ast.Attribute
                         ):

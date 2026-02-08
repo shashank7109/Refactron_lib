@@ -16,8 +16,9 @@ import yaml
 from rich import box
 from rich.align import Align
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.panel import Panel
-from rich.prompt import Prompt
+from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 from rich.text import Text
 from rich.theme import Theme
@@ -41,9 +42,15 @@ from refactron.core.device_auth import (
     start_device_authorization,
 )
 from refactron.core.exceptions import ConfigError
+from refactron.core.models import CodeIssue, IssueCategory, IssueLevel
 from refactron.core.refactor_result import RefactorResult
+from refactron.core.repositories import Repository, list_repositories
+from refactron.core.workspace import WorkspaceManager, WorkspaceMapping
+from refactron.llm.models import SuggestionStatus
+from refactron.llm.orchestrator import LLMOrchestrator
 from refactron.patterns.storage import PatternStorage
 from refactron.patterns.tuner import RuleTuner
+from refactron.rag.retriever import ContextRetriever
 
 # Custom theme for a premium, modern look
 THEME = Theme(
@@ -90,7 +97,7 @@ def _auth_banner(title: str) -> None:
             style="panel.border",
             box=box.ROUNDED,
             padding=(1, 2),
-            subtitle="[secondary]v1.0.14[/secondary]",
+            subtitle=f"[secondary]v{__version__}[/secondary]",
             subtitle_align="right",
         )
     )
@@ -157,6 +164,27 @@ def _setup_logging(verbose: bool = False) -> None:
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+
+    # Suppress noisy third-party libraries
+    if not verbose:
+        # Standard logging suppression
+        for logger_name in [
+            "httpx",
+            "sentence_transformers",
+            "transformers",
+            "tokenizers",
+            "chromadb",
+            "huggingface_hub",
+        ]:
+            logging.getLogger(logger_name).setLevel(logging.ERROR)
+
+        # Specific suppression for transformers library to avoid "Load Report"
+        try:
+            from transformers import logging as tf_logging
+
+            tf_logging.set_verbosity_error()
+        except ImportError:
+            pass
 
 
 def _load_config(
@@ -566,7 +594,7 @@ def _run_startup_animation() -> None:
             info_table.add_column(style="dim", justify="right")
             info_table.add_column(style="bold white")
 
-            info_table.add_row("Version:", "v1.0.13")
+            info_table.add_row("Version:", f"v{__version__}")
             info_table.add_row("Python:", sys.version.split()[0])
             info_table.add_row("OS:", platform.system())
 
@@ -603,7 +631,7 @@ def _run_startup_animation() -> None:
     for line in LOGO_LINES:
         console.print(Align.center(Text(line, style="bold #ffffff")))
     console.print(Align.center(Text(subtitle_text, style="italic #8a8a8a")))
-    console.print(Align.center(Text("v1.0.13", style="dim")))
+    console.print(Align.center(Text(f"v{__version__}", style="dim")))
     console.print()
 
 
@@ -714,7 +742,7 @@ def _run_minimal_loop(ctx: click.Context) -> None:
             if choice == "1":
                 _print_custom_help(ctx)
             elif choice == "2":
-                console.print("\nRefactron CLI v1.0.13")
+                console.print(f"\nRefactron CLI v{__version__}")
             elif choice == "3":
                 console.print("Goodbye!")
                 break
@@ -1048,8 +1076,85 @@ def auth_logout() -> None:
     logout()
 
 
+def _interactive_file_selector(workspace_path: Path) -> Path:
+    """Show an interactive file/folder selector for the workspace.
+
+    Args:
+        workspace_path: The workspace root directory
+
+    Returns:
+        Selected file or folder path
+    """
+    console.print("\n[bold]Select a file or folder to analyze:[/bold]\n")
+
+    # Get all Python files and directories
+    python_files = []
+    directories = []
+
+    # Add the workspace root as option
+    directories.append((".", "Entire workspace"))
+
+    # List immediate subdirectories
+    for item in sorted(workspace_path.iterdir()):
+        if item.is_dir() and not item.name.startswith("."):
+            # Count Python files in directory
+            py_count = len(list(item.rglob("*.py")))
+            if py_count > 0:
+                directories.append(
+                    (str(item.relative_to(workspace_path)), f"[{py_count} .py files]")
+                )
+        elif item.suffix == ".py":
+            python_files.append(str(item.relative_to(workspace_path)))
+
+    # Build selection table
+    table = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE)
+    table.add_column("#", style="dim", width=4, justify="right")
+    table.add_column("Type", width=6)
+    table.add_column("Path", style="cyan")
+    table.add_column("Info", style="dim")
+
+    options = []
+    idx = 1
+
+    # Add directories
+    for rel_path, info in directories:
+        table.add_row(str(idx), "📁 DIR", rel_path, info)
+        options.append((workspace_path / rel_path, "directory"))
+        idx += 1
+
+    # Add Python files
+    for file_path in python_files[:20]:  # Limit to 20 files to avoid clutter
+        table.add_row(str(idx), "🐍 FILE", file_path, "")
+        options.append((workspace_path / file_path, "file"))
+        idx += 1
+
+    if len(python_files) > 20:
+        table.add_row("...", "", f"[dim]and {len(python_files) - 20} more files[/dim]", "")
+
+    console.print(table)
+    console.print()
+
+    # Get user selection
+    try:
+        choice = IntPrompt.ask(
+            "[bold]Enter number to analyze[/bold]",
+            choices=[str(i) for i in range(1, len(options) + 1)],
+            show_choices=False,
+        )
+        selected_path, selected_type = options[choice - 1]
+
+        console.print(
+            f"\n[success]✓ Selected: {selected_path.relative_to(workspace_path)}[/success]\n"
+        )
+        return selected_path
+
+    except (KeyboardInterrupt, EOFError):
+        console.print("\n[yellow]Selection cancelled.[/yellow]")
+        raise SystemExit(0)
+
+
 @main.command()
-@click.argument("target", type=click.Path(exists=True))
+@click.argument("target", type=click.Path(exists=True), required=False)
 @click.option(
     "--config",
     "-c",
@@ -1103,7 +1208,7 @@ def auth_logout() -> None:
     ),
 )
 def analyze(
-    target: str,
+    target: Optional[str],
     config: Optional[str],
     detailed: bool,
     log_level: Optional[str],
@@ -1116,7 +1221,7 @@ def analyze(
     """
     Analyze code for issues and technical debt.
 
-    TARGET: Path to file or directory to analyze
+    TARGET: Path to file or directory to analyze (optional if workspace is connected)
     """
     # Setup logging
     _setup_logging()
@@ -1125,8 +1230,37 @@ def analyze(
     _auth_banner("Analysis")
     console.print()
 
-    # Setup
-    target_path = _validate_path(target)
+    # Determine target path - use workspace if not provided
+    if not target:
+        workspace_mgr = WorkspaceManager()
+        current_workspace = workspace_mgr.get_workspace_by_path(str(Path.cwd()))
+
+        if current_workspace:
+            console.print(f"[dim]Connected workspace: {current_workspace.repo_full_name}[/dim]")
+
+            # Show interactive file selector
+            workspace_root = Path(current_workspace.local_path)
+            target_path = _interactive_file_selector(workspace_root)
+            target = str(target_path)
+        else:
+            console.print(
+                (
+                    "[red]Error: No target specified and current directory "
+                    "is not a connected workspace.[/red]\n\n"
+                    "[dim]Options:[/dim]\n"
+                    "  1. Specify a path: refactron analyze /path/to/code\n"
+                    "  2. Connect a workspace: refactron repo connect <repo-name>\n"
+                    "  3. Navigate to a connected workspace directory\n"
+                )
+            )
+            raise SystemExit(1)
+    else:
+        # Path explicitly provided, validate and use it
+        target_path = _validate_path(target)
+
+    # Setup (only if not already set by interactive selector)
+    if "target_path" not in locals():
+        target_path = _validate_path(target)
     cfg = _load_config(config, profile, environment)
 
     # Override config with CLI options
@@ -1182,7 +1316,7 @@ def analyze(
 
 
 @main.command()
-@click.argument("target", type=click.Path(exists=True))
+@click.argument("target", type=click.Path(exists=True), required=False)
 @click.option(
     "--config",
     "-c",
@@ -1227,7 +1361,7 @@ def analyze(
     help="Collect interactive feedback on refactoring suggestions",
 )
 def refactor(
-    target: str,
+    target: Optional[str],
     config: Optional[str],
     profile: Optional[str],
     environment: Optional[str],
@@ -1238,7 +1372,7 @@ def refactor(
     """
     Refactor code with intelligent transformations.
 
-    TARGET: Path to file or directory to refactor
+    TARGET: Path to file or directory to refactor (optional if workspace is connected)
     """
     # Setup logging
     _setup_logging()
@@ -1246,6 +1380,26 @@ def refactor(
     console.print()
     _auth_banner("Refactoring")
     console.print()
+
+    # Determine target path - use workspace if not provided
+    if not target:
+        workspace_mgr = WorkspaceManager()
+        current_workspace = workspace_mgr.get_workspace_by_path(str(Path.cwd()))
+
+        if current_workspace:
+            target = current_workspace.local_path
+            console.print(
+                f"[dim]Using connected workspace: {current_workspace.repo_full_name}[/dim]\n"
+            )
+        else:
+            console.print(
+                "[red]Error: No target specified and current directory is not a connected workspace.[/red]\n\n"  # noqa: E501
+                "[dim]Options:[/dim]\n"
+                "  1. Specify a path: refactron refactor /path/to/code\n"
+                "  2. Connect a workspace: refactron repo connect <repo-name>\n"
+                "  3. Navigate to a connected workspace directory\n"
+            )
+            raise SystemExit(1)
 
     # Setup
     target_path = _validate_path(target)
@@ -1257,13 +1411,17 @@ def refactor(
     session_id = None
     if not preview and cfg.backup_enabled:
         try:
-            backup_root = target_path.parent if target_path.is_file() else target_path
+            # Detect project root to ensure backups are stored in a consistent location
+            # (usually the directory containing .git or .refactron.yaml)
+            refactron_instance = Refactron(cfg)
+            backup_root = refactron_instance.detect_project_root(target_path)
+
             backup_system = BackupRollbackSystem(backup_root)
 
             if target_path.is_file():
                 files = [target_path]
             else:
-                files = list(target_path.rglob("*.py"))
+                files = refactron_instance.get_python_files(target_path)
 
             if files:
                 session_id, failed_files = backup_system.prepare_for_refactoring(
@@ -1316,6 +1474,12 @@ def refactor(
 
         # Record feedback
         if not preview:
+            # Apply changes to disk
+            if result.apply():
+                console.print("[green]Successfully applied refactoring changes.[/green]")
+            else:
+                console.print("[red]Failed to apply some refactoring changes.[/red]")
+
             # Auto-record as accepted when applying changes
             _record_applied_operations(refactron, result)
         elif feedback:
@@ -1651,12 +1815,13 @@ def init(template: str) -> None:
 
 
 @main.command()
+@click.argument("session_id", required=False)
 @click.option(
     "--session",
     "-s",
     type=str,
     default=None,
-    help="Specific session ID to rollback (default: latest session)",
+    help="Specific session ID to rollback (deprecated, use argument instead)",
 )
 @click.option(
     "--use-git",
@@ -1678,6 +1843,7 @@ def init(template: str) -> None:
     help="Clear all backup sessions",
 )
 def rollback(
+    session_id: Optional[str],
     session: Optional[str],
     use_git: bool,
     list_sessions: bool,
@@ -1687,19 +1853,38 @@ def rollback(
     Rollback refactoring changes to restore original files.
 
     By default, restores files from the latest backup session.
-    Use --session to specify a specific session ID.
-    Use --use-git to rollback using Git instead of file backups.
+
+    Arguments:
+        SESSION_ID: Optional specific session ID to rollback.
 
     Examples:
       refactron rollback              # Rollback latest session
+      refactron rollback session_123  # Rollback specific session
       refactron rollback --list       # List all backup sessions
-      refactron rollback --session session_20240101_120000
       refactron rollback --use-git    # Use Git rollback
       refactron rollback --clear      # Clear all backups
     """
+    # Support both argument and option for session
+    target_session = session_id or session
     console.print("\n🔄 [bold blue]Refactron Rollback[/bold blue]\n")
 
     system = BackupRollbackSystem()
+
+    # If we appear to be in a subdirectory of a project, try to find the root
+    # so we can find the centralized backups directory.
+    if not system.list_sessions():
+        # Quick check for markers up the tree
+        current = Path.cwd()
+        for _ in range(10):
+            if (current / ".refactron" / "backups").exists():
+                system = BackupRollbackSystem(current)
+                break
+            if (current / ".git").exists() or (current / ".refactron.yaml").exists():
+                system = BackupRollbackSystem(current)
+                break
+            if current.parent == current:
+                break
+            current = current.parent
 
     if list_sessions:
         sessions = system.list_sessions()
@@ -1743,13 +1928,13 @@ def rollback(
         console.print("[dim]Tip: Backups are created automatically when using --apply mode.[/dim]")
         return
 
-    if session:
-        sess = system.backup_manager.get_session(session)
+    if target_session:
+        sess = system.backup_manager.get_session(target_session)
         if not sess:
-            console.print(f"[error]Session not found: {session}[/error]")
+            console.print(f"[error]Session not found: {target_session}[/error]")
             console.print("[dim]Use 'refactron rollback --list' to see available sessions.[/dim]")
             raise SystemExit(1)
-        console.print(f"[dim]Rolling back session: {session}[/dim]")
+        console.print(f"[dim]Rolling back session: {target_session}[/dim]")
         console.print(f"[dim]Files to restore: {len(sess['files'])}[/dim]")
     else:
         latest = sessions[-1]
@@ -1768,7 +1953,7 @@ def rollback(
         console.print("[yellow]Rollback cancelled.[/yellow]")
         return
 
-    result = system.rollback(session_id=session, use_git=use_git)
+    result = system.rollback(session_id=target_session, use_git=use_git)
 
     if result["success"]:
         console.print(f"\n[success]{result['message']}[/success]")
@@ -2394,6 +2579,601 @@ def patterns_tune(
     )
 
 
+@main.group()
+def repo() -> None:
+    """Manage GitHub repository connections."""
+    pass
+
+
+@repo.command("list")
+@click.option(
+    "--api-base-url",
+    default=DEFAULT_API_BASE_URL,
+    show_default=True,
+    help="Refactron API base URL",
+)
+def repo_list(api_base_url: str) -> None:
+    """
+    List all GitHub repositories connected to your account.
+
+    Shows repositories that have been connected via the Refactron WebApp.
+    """
+    _setup_logging()
+    console.print()
+    _auth_banner("Repository List")
+    console.print()
+
+    try:
+        with console.status("[primary]Fetching repositories...[/primary]"):
+            repositories = list_repositories(api_base_url)
+
+        if not repositories:
+            console.print(
+                Panel(
+                    "[yellow]No repositories found.\n\n"
+                    "Please connect your GitHub account on the Refactron website:[/yellow]\n"
+                    f"[link]{api_base_url.replace('/api', '')}[/link]",
+                    title="No Repositories",
+                    border_style="warning",
+                    box=box.ROUNDED,
+                )
+            )
+            return
+
+        # Create table
+        table = Table(
+            title=f"Connected Repositories ({len(repositories)})",
+            show_header=True,
+            header_style="primary",
+            box=box.ROUNDED,
+            border_style="panel.border",
+        )
+        table.add_column("Name", style="cyan", no_wrap=True)
+        table.add_column("Description", style="dim")
+        table.add_column("Language", justify="center", style="green")
+        table.add_column("Private", justify="center")
+        table.add_column("Updated", style="dim", no_wrap=True)
+
+        # Check which repos are already connected locally
+        workspace_mgr = WorkspaceManager()
+
+        for repository in repositories:
+            workspace = workspace_mgr.get_workspace(repository.full_name)
+            name_display = repository.name
+            if workspace:
+                name_display = f"✓ {repository.name}"
+
+            desc = repository.description or "[dim]No description[/dim]"
+            if len(desc) > 60:
+                desc = desc[:57] + "..."
+
+            lang = repository.language or "—"
+            private = "Yes" if repository.private else "No"
+            updated = repository.updated_at.split("T")[0]  # Just the date
+
+            table.add_row(name_display, desc, lang, private, updated)
+
+        console.print(table)
+        console.print("\n[dim]✓ = Already connected locally[/dim]")
+        console.print(
+            "[dim]Tip: Use 'refactron repo connect' to link a repository to a local directory[/dim]"
+        )
+
+    except RuntimeError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise SystemExit(1)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
+        raise SystemExit(1)
+
+
+@repo.command("connect")
+@click.argument("repo_name", required=False)
+@click.option(
+    "--path",
+    "-p",
+    type=click.Path(file_okay=False),
+    default=None,
+    help="Local path to connect (default: auto-clone to managed workspace)",
+)
+@click.option(
+    "--api-base-url",
+    default=DEFAULT_API_BASE_URL,
+    show_default=True,
+    help="Refactron API base URL",
+)
+def repo_connect(repo_name: Optional[str], path: Optional[str], api_base_url: str) -> None:
+    """
+    Connect to a GitHub repository.
+
+    REPO_NAME: Name of the repository (e.g., 'my-project' or 'user/my-project')
+
+    If the repository doesn't exist locally, it will be cloned automatically
+    to ~/.refactron/workspaces/<repo-name>/
+    """
+    _setup_logging()
+    console.print()
+    _auth_banner("Connect Repository")
+    console.print()
+
+    workspace_mgr = WorkspaceManager()
+
+    # If path is provided, use existing behavior (map existing local directory)
+    if path:
+        local_path = Path(path).resolve()
+
+        # Auto-detect repository if not provided
+        if not repo_name:
+            console.print("[dim]No repository specified, attempting auto-detection...[/dim]\n")
+            detected = workspace_mgr.detect_repository(local_path)
+            if detected:
+                console.print(f"[success]Detected repository: {detected}[/success]\n")
+                repo_name = detected
+            else:
+                console.print(
+                    "[red]Could not auto-detect repository from .git config.[/red]\n"
+                    "[dim]Please specify the repository name:[/dim]\n"
+                    "  refactron repo connect <repo-name>\n"
+                )
+                raise SystemExit(1)
+    else:
+        # No path provided - must have repo_name for cloning
+        if not repo_name:
+            console.print(
+                "[red]Error: Repository name is required when not in a git directory.[/red]\n\n"
+                "[dim]Usage:[/dim]\n"
+                "  refactron repo connect <repo-name>    # Auto-clone to workspace\n"
+                "  refactron repo connect --path .       # Link current directory\n"
+            )
+            raise SystemExit(1)
+
+    # Fetch available repositories
+    try:
+        with console.status("[primary]Fetching repositories...[/primary]"):
+            repositories = list_repositories(api_base_url)
+    except RuntimeError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise SystemExit(1)
+
+    # Find matching repository
+    matching_repo: Optional[Repository] = None
+    for repository in repositories:
+        if (
+            repository.name.lower() == repo_name.lower()
+            or repository.full_name.lower() == repo_name.lower()
+        ):
+            matching_repo = repository
+            break
+
+    if not matching_repo:
+        console.print(
+            f"[red]Repository '{repo_name}' not found in your connected repositories.[/red]\n"
+        )
+        console.print("[dim]Available repositories:[/dim]")
+        for repository in repositories[:5]:
+            console.print(f"  - {repository.full_name}")
+        if len(repositories) > 5:
+            console.print(f"  ... and {len(repositories) - 5} more")
+        console.print("\n[dim]Run 'refactron repo list' to see all repositories.[/dim]")
+        raise SystemExit(1)
+
+    # If no path provided, clone to managed workspace
+    if not path:
+        workspace_root = Path.home() / ".refactron" / "workspaces"
+        workspace_root.mkdir(parents=True, exist_ok=True)
+        local_path = workspace_root / matching_repo.name
+
+        # Check if already cloned
+        if local_path.exists():
+            console.print(f"[dim]Repository already exists at: {local_path}[/dim]\n")
+        else:
+            # Clone the repository
+            console.print(f"[primary]Cloning {matching_repo.full_name}...[/primary]\n")
+
+            import subprocess
+
+            try:
+                subprocess.run(
+                    ["git", "clone", matching_repo.clone_url, str(local_path)],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                console.print(f"[success]✓ Cloned successfully to {local_path}[/success]\n")
+            except subprocess.CalledProcessError as e:
+                console.print(f"[red]Failed to clone repository:[/red]\n{e.stderr}")
+                raise SystemExit(1)
+            except FileNotFoundError:
+                console.print(
+                    "[red]Error: git command not found.[/red]\n"
+                    "[dim]Please install git or use --path to connect an existing directory.[/dim]"
+                )
+                raise SystemExit(1)
+
+    # Create workspace mapping
+    mapping = WorkspaceMapping(
+        repo_id=matching_repo.id,
+        repo_name=matching_repo.name,
+        repo_full_name=matching_repo.full_name,
+        local_path=str(local_path),
+        connected_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+    workspace_mgr.add_workspace(mapping)
+
+    # Trigger background indexing via subprocess
+    # We spawn a separate process so it survives after this CLI command exits
+    import subprocess
+    import sys
+
+    console.print("[dim]Spawning background indexer...[/dim]")
+    try:
+        # Run 'refactron rag index' in the background
+        # Run 'refactron rag index' in the background
+        # We redirect output to DEVNULL to keep it quiet
+        pid = subprocess.Popen(
+            [sys.executable, "-m", "refactron.cli", "rag", "index", "--background"],
+            cwd=str(local_path),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,  # Detach from terminal
+        ).pid
+        console.print(f"[dim]Indexing started in background (PID: {pid}).[/dim]")
+        console.print("[dim]Run 'refactron rag status' to check progress.[/dim]")
+    except Exception as e:
+        console.print(f"[yellow]Auto-indexing failed to start: {e}[/yellow]")
+
+    # Create helpful navigation command
+    cd_command = f"cd {local_path}"
+
+    console.print(
+        Panel(
+            f"[success]Successfully connected![/success]\n\n"
+            f"Repository: [bold]{matching_repo.full_name}[/bold]\n"
+            f"Local Path: [bold]{local_path}[/bold]\n\n"
+            f"[yellow]To navigate to this directory, run:[/yellow]\n"
+            f"[bold cyan]{cd_command}[/bold cyan]",
+            title="✓ Connected",
+            border_style="success",
+            box=box.ROUNDED,
+        )
+    )
+
+    # Also print the cd command separately for easy copying
+    console.print(f"\n[dim]Quick copy:[/dim] [bold cyan]{cd_command}[/bold cyan]\n")
+
+
+@repo.command("disconnect")
+@click.argument("repo_name", required=False)
+@click.option(
+    "--delete-files",
+    is_flag=True,
+    help="Also delete the local directory (requires confirmation)",
+)
+def repo_disconnect(repo_name: Optional[str], delete_files: bool) -> None:
+    """
+    Disconnect a repository and optionally delete local files.
+
+    REPO_NAME: Name of the repository to disconnect (e.g., 'volumeofsphere' or 'user/volumeofsphere')  # noqa: E501
+
+    If not provided, attempts to detect from current directory.
+    """
+    _setup_logging()
+    console.print()
+    _auth_banner("Disconnect Repository")
+    console.print()
+
+    workspace_mgr = WorkspaceManager()
+
+    # Auto-detect if not provided
+    if not repo_name:
+        current_workspace = workspace_mgr.get_workspace_by_path(str(Path.cwd()))
+        if current_workspace:
+            repo_name = current_workspace.repo_full_name
+            console.print(f"[dim]Detected repository: {repo_name}[/dim]\n")
+        else:
+            console.print(
+                "[red]Error: No repository specified and current directory is not a connected workspace.[/red]\n\n"  # noqa: E501
+                "[dim]Usage:[/dim]\n"
+                "  refactron repo disconnect <repo-name>\n"
+                "  cd <workspace-dir> && refactron repo disconnect\n"
+            )
+            raise SystemExit(1)
+
+    # Find the workspace
+    workspace = workspace_mgr.get_workspace(repo_name)
+    if not workspace:
+        console.print(f"[yellow]Repository '{repo_name}' is not connected.[/yellow]\n")
+        console.print("[dim]Run 'refactron repo list' to see connected repositories.[/dim]")
+        raise SystemExit(1)
+
+    local_path = Path(workspace.local_path)
+
+    # Confirm deletion if requested
+    if delete_files:
+        if not local_path.exists():
+            console.print(f"[yellow]Local directory does not exist: {local_path}[/yellow]\n")
+        else:
+            console.print(
+                Panel(
+                    f"[yellow]⚠️  WARNING: This will permanently delete:[/yellow]\n\n"
+                    f"[bold]{local_path}[/bold]\n\n"
+                    f"[dim]This action cannot be undone![/dim]",
+                    title="Confirm Deletion",
+                    border_style="yellow",
+                    box=box.ROUNDED,
+                )
+            )
+
+            if not click.confirm(
+                "\nAre you sure you want to delete this directory?", default=False
+            ):
+                console.print("[yellow]Deletion cancelled.[/yellow]")
+                delete_files = False
+
+    # Remove workspace mapping
+    workspace_mgr.remove_workspace(repo_name)
+    console.print(f"[success]✓ Removed workspace mapping for '{repo_name}'[/success]\n")
+
+    # Delete files if confirmed
+    files_deleted = False
+    if delete_files and local_path.exists():
+        try:
+            import shutil
+
+            shutil.rmtree(local_path)
+            console.print(f"[success]✓ Deleted directory: {local_path}[/success]\n")
+            files_deleted = True
+        except Exception as e:
+            console.print(f"[red]Failed to delete directory: {e}[/red]\n")
+            raise SystemExit(1)
+
+    # Show appropriate summary
+    if not local_path.exists() and not files_deleted:
+        # Directory was already gone
+        console.print(
+            Panel(
+                f"[yellow]Workspace mapping removed[/yellow]\n\n"
+                f"Repository: [bold]{repo_name}[/bold]\n"
+                f"Status: [dim]Local directory was already deleted[/dim]",
+                title="✓ Cleaned Up",
+                border_style="yellow",
+                box=box.ROUNDED,
+            )
+        )
+    else:
+        # Normal disconnect
+        console.print(
+            Panel(
+                f"[success]Repository disconnected successfully![/success]\n\n"
+                f"Repository: [bold]{repo_name}[/bold]\n"
+                f"Mapping removed: [bold]Yes[/bold]\n"
+                f"Files deleted: [bold]{'Yes' if files_deleted else 'No'}[/bold]",
+                title="✓ Disconnected",
+                border_style="success",
+                box=box.ROUNDED,
+            )
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RAG Commands
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@main.group()
+def rag() -> None:
+    """RAG (Retrieval-Augmented Generation) management commands."""
+    pass
+
+
+@rag.command("index")
+@click.option("--background", is_flag=True, help="Run in background mode (suppress output)")
+@click.option("--summarize", is_flag=True, help="Use AI to summarize code for better retrieval")
+def rag_index(background: bool, summarize: bool) -> None:
+    """Index the current workspace for RAG retrieval."""
+    if background:
+        # Suppress all logging and output in background mode
+        logging.getLogger().setLevel(logging.CRITICAL)
+        import os
+        import sys
+
+        sys.stdout = open(os.devnull, "w")
+        sys.stderr = open(os.devnull, "w")
+    else:
+        _setup_logging()
+        console.print()
+        _auth_banner("Index Repository")
+        console.print()
+
+    from refactron.core.workspace import WorkspaceManager
+    from refactron.rag.indexer import RAGIndexer
+
+    workspace_mgr = WorkspaceManager()
+
+    # Get current workspace
+    current_workspace = workspace_mgr.get_workspace_by_path(str(Path.cwd()))
+    if not current_workspace:
+        if not background:
+            console.print(
+                "[red]Error: Not in a connected workspace.[/red]\n\n"
+                "[dim]Run 'refactron repo connect <repo-name>' first.[/dim]"
+            )
+        raise SystemExit(1)
+
+    local_path = Path(current_workspace.local_path)
+
+    if not background:
+        console.print(f"[primary]Indexing:[/primary] {current_workspace.repo_full_name}\n")
+
+    try:
+        if background:
+            # Run without visual feedback
+            indexer = RAGIndexer(local_path)
+            indexer.index_repository(local_path, summarize=summarize)
+        else:
+            with console.status("[primary]Parsing and indexing code...[/primary]"):
+                indexer = RAGIndexer(local_path)
+                stats = indexer.index_repository(local_path, summarize=summarize)
+
+            console.print(
+                Panel(
+                    f"[success]Indexing complete![/success]\n\n"
+                    f"Files indexed: [bold]{stats.total_files}[/bold]\n"
+                    f"Code chunks: [bold]{stats.total_chunks}[/bold]\n"
+                    f"Index location: [dim]{stats.index_path}[/dim]\n\n"
+                    f"[dim]Chunk breakdown:[/dim]\n"
+                    f"  • Functions: {stats.chunk_types.get('function', 0)}\n"
+                    f"  • Classes: {stats.chunk_types.get('class', 0)}\n"
+                    f"  • Methods: {stats.chunk_types.get('method', 0)}\n"
+                    f"  • Modules: {stats.chunk_types.get('module', 0)}",
+                    title="✓ Indexed",
+                    border_style="success",
+                    box=box.ROUNDED,
+                )
+            )
+    except Exception as e:
+        console.print(f"[red]Error indexing repository: {e}[/red]")
+        raise SystemExit(1)
+
+
+@rag.command("search")
+@click.argument("query")
+@click.option("--top-k", default=5, help="Number of results to return")
+@click.option("--type", "chunk_type", help="Filter by chunk type (function/class/module)")
+@click.option("--rerank", is_flag=True, help="Use AI to rerank results for better accuracy")
+def rag_search(query: str, top_k: int, chunk_type: Optional[str], rerank: bool) -> None:
+    """Search the RAG index for similar code."""
+    _setup_logging()
+    console.print()
+
+    from refactron.core.workspace import WorkspaceManager
+    from refactron.rag.retriever import ContextRetriever
+
+    workspace_mgr = WorkspaceManager()
+
+    # Get current workspace
+    current_workspace = workspace_mgr.get_workspace_by_path(str(Path.cwd()))
+    if not current_workspace:
+        console.print(
+            "[red]Error: Not in a connected workspace.[/red]\n\n"
+            "[dim]Run 'refactron repo connect <repo-name>' first.[/dim]"
+        )
+        raise SystemExit(1)
+
+    local_path = Path(current_workspace.local_path)
+
+    try:
+        retriever = ContextRetriever(local_path)
+        results = retriever.retrieve_similar(query, top_k=top_k, chunk_type=chunk_type)
+
+        if not results:
+            console.print(f"[yellow]No results found for: {query}[/yellow]")
+            return
+
+        console.print(f"\n[primary]Found {len(results)} results for:[/primary] {query}\n")
+
+        for i, result in enumerate(results, 1):
+            relevance_score = max(0, 1 - result.distance) * 100
+
+            # AI Reranking if enabled
+            if rerank:
+                try:
+                    from refactron.llm.client import GroqClient
+
+                    client = GroqClient()
+                    prompt = (  # noqa: E501
+                        f"Rate the relevance of the following code snippet to the user query: '{query}'\n\n"  # noqa: E501
+                        f"Code:\n{result.content[:500]}\n\n"
+                        "Provide only a percentage number (e.g. 85%) representing how well this code matches "  # noqa: E501
+                        "the semantic intent of the query."
+                    )
+                    ai_response = client.generate(
+                        prompt=prompt,
+                        system="You are a code relevance evaluator. Output only the percentage.",
+                        max_tokens=10,
+                    )
+                    # Extract number from response (e.g. "85%" or "85")
+                    import re
+
+                    match = re.search(r"(\d+)%", ai_response) or re.search(r"(\d+)", ai_response)
+                    if match:
+                        relevance_score = float(match.group(1))
+                except Exception:
+                    pass  # Fallback to distance-based score
+
+            console.print(
+                Panel(
+                    f"[bold]{result.name}[/bold] ({result.chunk_type})\n"
+                    f"[dim]{result.file_path}:{result.line_range[0]}-{result.line_range[1]}[/dim]\n\n"  # noqa: E501
+                    f"```python\n{result.content[:200]}{'...' if len(result.content) > 200 else ''}\n```\n\n"  # noqa: E501
+                    f"[dim]Similarity: {relevance_score / 100.0:.2%}[/dim]",
+                    title=f"Result {i}/{len(results)}",
+                    border_style="dim",
+                    box=box.ROUNDED,
+                )
+            )
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]\n")
+        console.print("[dim]Run 'refactron rag index' to create an index first.[/dim]")
+        raise SystemExit(1)
+
+
+@rag.command("status")
+def rag_status() -> None:
+    """Show RAG index statistics."""
+    _setup_logging()
+    console.print()
+
+    from refactron.core.workspace import WorkspaceManager
+    from refactron.rag.indexer import RAGIndexer
+
+    workspace_mgr = WorkspaceManager()
+
+    # Get current workspace
+    current_workspace = workspace_mgr.get_workspace_by_path(str(Path.cwd()))
+    if not current_workspace:
+        console.print(
+            "[red]Error: Not in a connected workspace.[/red]\n\n"
+            "[dim]Run 'refactron repo connect <repo-name>' first.[/dim]"
+        )
+        raise SystemExit(1)
+
+    local_path = Path(current_workspace.local_path)
+
+    try:
+        indexer = RAGIndexer(local_path)
+        stats = indexer.get_stats()
+
+        if stats.total_chunks == 0:
+            console.print(
+                "[yellow]No index found.[/yellow]\n\n"
+                "[dim]Run 'refactron rag index' to create one.[/dim]"
+            )
+            return
+
+        console.print(
+            Panel(
+                f"[primary]RAG Index Status[/primary]\n\n"
+                f"Files indexed: [bold]{stats.total_files}[/bold]\n"
+                f"Total chunks: [bold]{stats.total_chunks}[/bold]\n"
+                f"Embedding model: [dim]{stats.embedding_model}[/dim]\n"
+                f"Index location: [dim]{stats.index_path}[/dim]\n\n"
+                f"[dim]Chunk breakdown:[/dim]\n"
+                f"  • Functions: {stats.chunk_types.get('function', 0)}\n"
+                f"  • Classes: {stats.chunk_types.get('class', 0)}\n"
+                f"  • Methods: {stats.chunk_types.get('method', 0)}\n"
+                f"  • Modules: {stats.chunk_types.get('module', 0)}",
+                title="RAG Status",
+                border_style="primary",
+                box=box.ROUNDED,
+            )
+        )
+    except Exception as e:
+        console.print(f"[yellow]No index found: {e}[/yellow]\n")
+        console.print("[dim]Run 'refactron rag index' to create one.[/dim]")
+
+
 @patterns.command("profile")
 @click.option(
     "--project",
@@ -2466,6 +3246,259 @@ def patterns_profile(project_path: str, config_path: Optional[str]) -> None:
         )
 
     console.print(table)
+
+
+@main.command()
+@click.argument("target", required=False, type=click.Path(exists=True))
+@click.option("--line", type=int, help="Specific line number to fix")
+@click.option("--interactive/--no-interactive", default=True, help="Use interactive mode")
+@click.option("--apply/--no-apply", default=False, help="Apply the suggested changes to the file")
+def suggest(target: Optional[str], line: Optional[int], interactive: bool, apply: bool):
+    """
+    Generate AI-powered refactoring suggestions.
+
+    Uses RAG and LLM to analyze code and propose fixes.
+    """
+    console.print()
+    _auth_banner("AI Refactoring")
+    console.print()
+
+    # 1. Setup
+    cfg = _load_config(None)
+    _setup_logging()
+
+    target_path = Path(target or ".").resolve()
+
+    # Try to find the project root for RAG context
+    refactron_instance = Refactron(cfg)
+    workspace_path = refactron_instance.detect_project_root(target_path)
+
+    console.print(f"[bold]Analyzing:[/bold] {target_path}")
+    if line:
+        console.print(f"[bold]Line:[/bold] {line}")
+
+    # 2. Initialize Components
+    try:
+        retriever = ContextRetriever(workspace_path)
+        console.print("[dim]RAG Index loaded.[/dim]")
+    except Exception:
+        console.print(
+            "[yellow]Warning: RAG index not found. Context retrieval will be limited.[/yellow]"
+        )
+        console.print("[dim]Run 'refactron rag index' to enable full context.[/dim]")
+        retriever = None
+
+    orchestrator = LLMOrchestrator(retriever=retriever)
+
+    # 3. Read Code
+    start_line_idx = 0
+    end_line_idx = 0
+
+    if target_path.is_file():
+        code = target_path.read_text(encoding="utf-8")
+        original_snippet = code
+        # Extract snippet if line provided
+        if line:
+            lines = code.splitlines()
+            if 1 <= line <= len(lines):
+                # Context window +/- 10 lines for the LLM prompt
+                start_line_idx = max(0, line - 10)
+                end_line_idx = min(len(lines), line + 10)
+                original_snippet = "\n".join(lines[start_line_idx:end_line_idx])
+
+                # Smaller context for display
+                display_start = max(0, line - 3)
+                display_end = min(len(lines), line + 3)
+                display_code = "\n".join(lines[display_start:display_end])
+                console.print(Panel(display_code, title="Code Snippet", style="dim"))
+            else:
+                console.print(f"[red]Error: Line {line} is out of range.[/red]")
+                return
+    else:
+        console.print(
+            "[red]Error: Directory analysis not yet supported. Please specify a file.[/red]"
+        )
+        return
+
+    # 4. Generate Suggestion
+    # Create a synthetic issue for now
+    issue = CodeIssue(
+        category=IssueCategory.MODERNIZATION,
+        level=IssueLevel.INFO,
+        message="Refactor and improve this code",
+        file_path=target_path,
+        line_number=line or 1,
+    )
+
+    with console.status("[bold cyan]Generating suggestion...[/bold cyan]"):
+        suggestion = orchestrator.generate_suggestion(issue, original_code=original_snippet)
+
+    # 5. Display Result
+    if suggestion.status == SuggestionStatus.FAILED:
+        console.print(f"[red]Generation Failed:[/red] {suggestion.explanation}")
+        return
+
+    console.print()
+    console.print(
+        Panel(
+            Markdown(suggestion.explanation),
+            title=f"Suggestion ({suggestion.model_name})",
+            border_style="green",
+        )
+    )
+
+    console.print(Panel(suggestion.proposed_code, title="Proposed Code", style="on #1e1e1e"))
+
+    console.print(
+        f"[dim]AI Confidence: [bold]{suggestion.llm_confidence:.2f}[/bold], Safety Score: [bold]{suggestion.confidence_score:.2f}[/bold][/dim]"  # noqa: E501
+    )
+
+    if suggestion.safety_result:
+        status_color = "green" if suggestion.safety_result.passed else "red"
+        console.print(
+            f"Safety Check: [{status_color}]{'PASSED' if suggestion.safety_result.passed else 'FAILED'}[/{status_color}]"  # noqa: E501
+        )
+        if suggestion.safety_result.issues:
+            console.print(f"Issues: {', '.join(suggestion.safety_result.issues)}")
+
+    console.print()
+
+    # 6. Apply Changes
+    if apply:
+        if interactive:
+            if not click.confirm("Do you want to apply these changes?"):
+                console.print("[yellow]Changes cancelled.[/yellow]")
+                return
+
+        try:
+            # Create backup
+            backup_sys = BackupRollbackSystem(workspace_path)
+            session_id, _ = backup_sys.prepare_for_refactoring(
+                [target_path], description="AI suggestion"
+            )
+            console.print(f"[dim]Backup created: {session_id}[/dim]")
+
+            # Construct new content
+            new_file_content = ""
+            if line:
+                # Reload lines to ensure freshness
+                current_lines = target_path.read_text(encoding="utf-8").splitlines()
+                # Determine indentation of the original block to verify alignment (optional, skipping for now)  # noqa: E501
+
+                # Replace the exact block that was sent to LLM
+                replacement_lines = suggestion.proposed_code.splitlines()
+
+                # Reconstruct
+                pre_block = current_lines[:start_line_idx]
+                post_block = current_lines[end_line_idx:]
+
+                final_lines = pre_block + replacement_lines + post_block
+                new_file_content = "\n".join(final_lines)
+                if code.endswith("\n"):
+                    new_file_content += "\n"
+            else:
+                new_file_content = suggestion.proposed_code
+
+            target_path.write_text(new_file_content, encoding="utf-8")
+            console.print("[green bold]Successfully applied AI suggestion![/green bold]")
+            console.print(f"[dim]Run 'refactron rollback {session_id}' to undo.[/dim]")
+
+        except Exception as e:
+            console.print(f"[red]Failed to apply changes: {e}[/red]")
+
+
+@main.command()
+@click.argument("target", type=click.Path(exists=True))
+@click.option(
+    "--apply/--no-apply", default=False, help="Apply the documentation changes to the file"
+)
+@click.option("--interactive/--no-interactive", default=True, help="Use interactive mode for apply")
+def document(target: str, apply: bool, interactive: bool):
+    """
+    Generate Google-style docstrings for a Python file.
+
+    Uses AI to analyze code and add comprehensive documentation.
+    """
+    console.print()
+    _auth_banner("AI Documentation")
+    console.print()
+
+    # Setup
+    cfg = _load_config(None)
+    _setup_logging()
+
+    target_path = Path(target).resolve()
+
+    if not target_path.is_file():
+        console.print("[red]Error: Please specify a file, not a directory.[/red]")
+        return
+
+    refactron_instance = Refactron(cfg)
+    workspace_path = refactron_instance.detect_project_root(target_path)
+
+    console.print(f"[bold]Documenting:[/bold] {target_path}")
+
+    # Initialize components
+    try:
+        retriever = ContextRetriever(workspace_path)
+    except Exception:
+        console.print(
+            "[yellow]Warning: RAG index not found. Context retrieval will be limited.[/yellow]"
+        )
+        retriever = None
+
+    orchestrator = LLMOrchestrator(retriever=retriever)
+
+    # Generate
+    code = target_path.read_text(encoding="utf-8")
+
+    with console.status("[bold cyan]Generating documentation...[/bold cyan]"):
+        suggestion = orchestrator.generate_documentation(code, file_path=str(target_path))
+
+    if suggestion.status == SuggestionStatus.FAILED:
+        console.print(f"[red]Generation Failed:[/red] {suggestion.explanation}")
+        return
+
+    doc_path = target_path.with_name(f"{target_path.stem}_doc.md")
+
+    console.print()
+    console.print(
+        Panel(
+            Markdown(suggestion.explanation),
+            title=f"Documentation Plan ({suggestion.model_name})",
+            border_style="blue",
+        )
+    )
+
+    console.print(
+        Panel(
+            Markdown(suggestion.proposed_code),
+            title=f"Preview: {doc_path.name}",
+            style="on #1e1e1e",
+        )
+    )
+
+    console.print(f"[dim]Confidence: {suggestion.confidence_score:.2f}[/dim]")
+    console.print()
+
+    # Apply
+    if apply:
+        if interactive:
+            if not click.confirm(
+                f"Do you want to create external documentation at {doc_path.name}?"
+            ):
+                console.print("[yellow]Changes cancelled.[/yellow]")
+                return
+
+        try:
+            # Write new file (no backup needed for new file creation)
+            doc_path.write_text(suggestion.proposed_code, encoding="utf-8")
+            console.print(
+                f"[green bold]Successfully created documentation: {doc_path}[/green bold]"
+            )
+
+        except Exception as e:
+            console.print(f"[red]Failed to create documentation: {e}[/red]")
 
 
 if __name__ == "__main__":

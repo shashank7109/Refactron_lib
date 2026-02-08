@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "refactron"
-version = "1.0.14"
+version = "1.0.15"
 description = "Python code analysis and refactoring tool with security scanning, performance detection, and automated fixes"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -35,6 +35,14 @@ dependencies = [
     "radon>=6.0.0",
     "requests>=2.25.0",
     "astroid>=3.0.0",
+    # RAG Infrastructure
+    "chromadb>=0.4.22",
+    "tree-sitter>=0.20.4",
+    "tree-sitter-python>=0.20.4",
+    "sentence-transformers>=2.5.1",
+    # LLM Integration (Free Cloud APIs)
+    "groq>=0.4.0",  # Free cloud LLM (Llama 3, Mixtral)
+    "pydantic>=2.6.0",
 ]
 
 [project.optional-dependencies]

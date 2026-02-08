@@ -781,7 +781,7 @@ def run(cmd):
     subprocess.Popen(cmd, shell=True)
 """
         issues = analyzer.analyze(Path("test.py"), code)
-        assert any(issue.rule_id == "SEC005" for issue in issues)
+        assert any(issue.rule_id == "SEC0052" for issue in issues)
 
     def test_yaml_safe_load_not_flagged(self) -> None:
         """Test that yaml.safe_load is not flagged."""

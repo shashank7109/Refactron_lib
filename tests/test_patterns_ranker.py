@@ -120,25 +120,25 @@ class TestRefactoringRanker:
             fingerprinter = PatternFingerprinter()
             ranker = RefactoringRanker(storage, matcher, fingerprinter)
 
-            # Create high-acceptance pattern
-            pattern_hash1 = fingerprinter.fingerprint_code("def high(): pass")
+            # Create high-acceptance pattern - with return statement
+            pattern_hash1 = fingerprinter.fingerprint_code("def high():\n    return 42")
             pattern1 = RefactoringPattern.create(
                 pattern_hash=pattern_hash1,
                 operation_type="extract_method",
-                code_snippet_before="def high(): pass",
-                code_snippet_after="def high_refactored(): pass",
+                code_snippet_before="def high():\n    return 42",
+                code_snippet_after="def high_refactored():\n    return 42",
             )
             pattern1.acceptance_rate = 0.9
             pattern1.total_occurrences = 20
             storage.save_pattern(pattern1)
 
-            # Create low-acceptance pattern
-            pattern_hash2 = fingerprinter.fingerprint_code("def low(): pass")
+            # Create low-acceptance pattern - with if statement (different structure)
+            pattern_hash2 = fingerprinter.fingerprint_code("def low():\n    if True:\n        pass")
             pattern2 = RefactoringPattern.create(
                 pattern_hash=pattern_hash2,
                 operation_type="extract_method",
-                code_snippet_before="def low(): pass",
-                code_snippet_after="def low_refactored(): pass",
+                code_snippet_before="def low():\n    if True:\n        pass",
+                code_snippet_after="def low_refactored():\n    if True:\n        pass",
             )
             pattern2.acceptance_rate = 0.3
             pattern2.total_occurrences = 5
@@ -149,8 +149,8 @@ class TestRefactoringRanker:
                 file_path=Path("test.py"),
                 line_number=10,
                 description="High acceptance",
-                old_code="def high(): pass",
-                new_code="def high_refactored(): pass",
+                old_code="def high():\n    return 42",
+                new_code="def high_refactored():\n    return 42",
                 risk_score=0.2,
             )
 
@@ -159,8 +159,8 @@ class TestRefactoringRanker:
                 file_path=Path("test.py"),
                 line_number=20,
                 description="Low acceptance",
-                old_code="def low(): pass",
-                new_code="def low_refactored(): pass",
+                old_code="def low():\n    if True:\n        pass",
+                new_code="def low_refactored():\n    if True:\n        pass",
                 risk_score=0.2,
             )
 
