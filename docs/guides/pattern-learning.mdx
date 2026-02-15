@@ -1,0 +1,364 @@
+---
+title: Pattern Learning
+description: 'Adaptive learning system that improves over time'
+---
+
+## Overview
+
+Refactron's Pattern Learning System learns from your refactoring decisions, building a knowledge base that improves the quality and relevance of future recommendations. **The more you use Refactron, the smarter it gets!**
+
+## How It Works
+
+<Steps>
+  <Step title="Pattern Fingerprinting">
+    When Refactron suggests a refactoring, it creates a unique "fingerprint" of the code pattern
+  </Step>
+  
+  <Step title="Feedback Collection">
+    You provide feedback: **accepted**, **rejected**, or **ignored**
+  </Step>
+  
+  <Step title="Pattern Learning">
+    Refactron tracks:
+    - Acceptance rates for each pattern
+    - Pattern frequency and recency
+    - Code metrics improvements
+    - Project-specific preferences
+  </Step>
+  
+  <Step title="Smart Ranking">
+    Future suggestions ranked based on historical acceptance rates and patterns
+  </Step>
+</Steps>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Automatic Learning" icon="graduation-cap">
+    Learns from every refactoring decision you make
+  </Card>
+  <Card title="Smart Ranking" icon="ranking-star">
+    Ranks suggestions by historical acceptance patterns
+  </Card>
+  <Card title="Project-Specific" icon="folder">
+    Adapts to your project's unique coding style
+  </Card>
+  <Card title="Persistent Storage" icon="database">
+    Patterns persist across sessions
+  </Card>
+</CardGroup>
+
+## Configuration
+
+### Enable Pattern Learning
+
+Pattern learning is **enabled by default**. Configure in `.refactron.yaml`:
+
+```yaml .refactron.yaml
+# Pattern learning settings
+enable_pattern_learning: true          # Master switch
+pattern_learning_enabled: true         # Learn from feedback
+pattern_ranking_enabled: true          # Rank by patterns
+pattern_storage_dir: null              # null = auto-detect
+```
+
+### Python API
+
+```python
+from refactron import Refactron
+from refactron.core.config import RefactronConfig
+
+# Enable all pattern learning features
+config = RefactronConfig(
+    enable_pattern_learning=True,
+    pattern_learning_enabled=True,
+    pattern_ranking_enabled=True
+)
+refactron = Refactron(config)
+
+# Disable pattern learning
+config = RefactronConfig(enable_pattern_learning=False)
+refactron = Refactron(config)
+```
+
+## Providing Feedback
+
+### Interactive Feedback
+
+```bash
+# Refactor with feedback prompts
+refactron refactor myfile.py --preview --feedback
+```
+
+During preview, you'll be prompted to accept/reject each suggestion.
+
+### Automatic Feedback
+
+Feedback is automatically recorded when you apply refactorings:
+
+```bash
+# Accepted suggestions are automatically recorded
+refactron refactor myfile.py --apply
+```
+
+### Manual Feedback
+
+Provide explicit feedback for specific operations:
+
+```bash
+# Accept a suggestion
+refactron feedback <operation-id> --action accepted
+
+# Reject with reason
+refactron feedback <operation-id> --action rejected --reason "Breaks API"
+
+# Mark as ignored
+refactron feedback <operation-id> --action ignored
+```
+
+### Python API Feedback
+
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+result = refactron.refactor("myfile.py", preview=True)
+
+# Record feedback for first operation
+if result.operations:
+    op = result.operations[0]
+    refactron.record_feedback(
+        operation_id=op.operation_id,
+        action="accepted",
+        reason="Improved readability",
+        operation=op
+    )
+```
+
+## Pattern Analysis
+
+### View Pattern Statistics
+
+```bash
+# Analyze project patterns
+refactron patterns analyze
+```
+
+Output shows:
+- Most accepted patterns
+- Patterns with low acceptance
+- Recommendations for tuning
+
+### Get Tuning Recommendations
+
+```bash
+# Get automated recommendations
+refactron patterns recommend
+```
+
+### Apply Tuning
+
+```bash
+# Auto-apply recommended tuning
+refactron patterns tune --auto
+
+# View current pattern profile
+refactron patterns profile
+```
+
+## Ranking in Action
+
+When pattern learning is enabled, suggestions show ranking scores:
+
+```bash
+refactron refactor myfile.py --preview
+```
+
+Output:
+```
+📊 Refactoring Suggestions (ranked by learned patterns)
+
+Operation 1: Extract Constant
+  File: myfile.py:42
+  Ranking Score: 0.85 ⭐  # High acceptance history
+  Risk: Low (0.2)
+  Description: Extract magic number 42 to constant
+
+Operation 2: Simplify Conditional
+  File: myfile.py:67
+  Ranking Score: 0.35      # Lower acceptance history
+  Risk: Moderate (0.4)
+  Description: Simplify nested if statements
+```
+
+## Storage Location
+
+Pattern data is stored in JSON files:
+
+**Default Locations:**
+- Project root: `.refactron/patterns/`
+- User home: `~/.refactron/patterns/` (fallback)
+
+**Storage Files:**
+- `patterns.json` - Learned patterns
+- `feedback.json` - Feedback records
+- `project_profiles.json` - Project configs
+- `pattern_metrics.json` - Pattern metrics
+
+**Custom Location:**
+```yaml .refactron.yaml
+pattern_storage_dir: /custom/path/patterns
+```
+
+## Configuration Options
+
+<ParamField path="enable_pattern_learning" type="boolean" default="true">
+  Master switch for all pattern learning features
+</ParamField>
+
+<ParamField path="pattern_learning_enabled" type="boolean" default="true">
+  Enable learning from feedback (requires `enable_pattern_learning`)
+</ParamField>
+
+<ParamField path="pattern_ranking_enabled" type="boolean" default="true">
+  Enable ranking based on learned patterns (requires `enable_pattern_learning`)
+</ParamField>
+
+<ParamField path="pattern_storage_dir" type="string" default="null">
+  Custom storage directory (null = auto-detect project root or home directory)
+</ParamField>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Provide Consistent Feedback">
+    The more feedback you provide, the better the system learns:
+    - **Accept** good refactorings
+    - **Reject** inappropriate suggestions
+    - **Ignore** if unsure
+  </Accordion>
+  
+  <Accordion title="Use Project-Specific Tuning">
+    For large projects, use automated tuning:
+    ```bash
+    refactron patterns analyze
+    refactron patterns tune --auto
+    ```
+  </Accordion>
+  
+  <Accordion title="Review Pattern Statistics">
+    Periodically check pattern performance:
+    ```bash
+    refactron patterns analyze
+    ```
+  </Accordion>
+  
+  <Accordion title="Custom Storage for CI/CD">
+    In CI/CD environments, use consistent storage:
+    ```yaml
+    pattern_storage_dir: /ci/patterns
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Usage
+
+### Custom Pattern Weights
+
+```python
+from refactron.patterns.storage import PatternStorage
+from pathlib import Path
+
+storage = PatternStorage()
+profile = storage.get_project_profile(project_path=Path("/project"))
+
+# Set custom weight for a pattern
+profile.set_pattern_weight("pattern-id-123", 0.9)
+
+# Save profile
+storage.save_project_profile(profile)
+```
+
+### Batch Learning
+
+```python
+from refactron.patterns.learner import PatternLearner
+
+learner = PatternLearner(storage=storage, fingerprinter=fingerprinter)
+
+# Load pending feedback
+feedback_list = storage.load_feedback()
+
+# Process in batch
+learner.batch_learn(feedback_list)
+```
+
+### Pattern Cleanup
+
+```python
+from refactron.patterns.learning_service import LearningService
+
+service = LearningService(storage=storage)
+
+# Remove patterns older than 90 days
+service.cleanup_old_patterns(days=90)
+```
+
+## Integration with AI
+
+Pattern learning integrates with [AI Features](/guides/ai-features):
+
+- AI suggestions use learned patterns for better context
+- Feedback on AI refactorings improves future AI suggestions
+- RAG system considers pattern preferences
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Patterns Not Learning">
+    **Solutions:**
+    1. Check `pattern_learning_enabled` is `true`
+    2. Verify storage directory is writable
+    3. Check logs: `refactron refactor --log-level DEBUG`
+  </Accordion>
+  
+  <Accordion title="Ranking Not Working">
+    **Solutions:**
+    1. Check `pattern_ranking_enabled` is `true`
+    2. Ensure patterns have been learned (provide feedback first)
+    3. Verify sufficient pattern history exists
+  </Accordion>
+  
+  <Accordion title="Storage Issues">
+    **Solutions:**
+    1. Check directory permissions
+    2. Use custom `pattern_storage_dir` if needed
+    3. Verify disk space available
+  </Accordion>
+</AccordionGroup>
+
+## Performance
+
+- **Memory**: In-memory caching with invalidation on updates
+- **Storage**: ~100-200 KB for typical project (100-1000 patterns)
+- **Learning Speed**: &lt;100ms per feedback record
+- **Ranking Speed**: ~10ms per operation
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="AI Features"
+    icon="sparkles"
+    href="/guides/ai-features"
+  >
+    Combine pattern learning with AI
+  </Card>
+  <Card
+    title="Advanced Usage"
+    icon="gear"
+    href="/advanced/performance"
+  >
+    Performance optimization techniques
+  </Card>
+</CardGroup>

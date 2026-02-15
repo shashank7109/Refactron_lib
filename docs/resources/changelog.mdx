@@ -1,0 +1,168 @@
+---
+title: Changelog
+description: 'Release history and version updates'
+---
+
+## v1.0.15 (2026-02-08)
+
+### Added
+
+**LLM/RAG Integration**: Full semantic intelligence suite
+- LLM orchestration using Llama 3 via Groq
+- ChromaDB for semantic code indexing
+- `refactron suggest` - AI-powered refactoring suggestions
+- `refactron document` - Automated docstring generation
+
+**Repository Management**:
+- `refactron repo list` - List connected repositories
+- `refactron repo connect` - Connect local workspaces
+- `refactron repo disconnect` - Disconnect repositories
+
+**Observability & Metrics**:
+- `refactron metrics` - Performance statistics
+- `refactron serve-metrics` - Prometheus endpoint
+- `refactron telemetry` - Opt-in usage analytics
+
+**CI/CD Integration**:
+- `refactron ci` - Generate GitHub Actions and GitLab CI configs
+
+### Fixed
+- Security hardened URL sanitization
+- Python 3.8 compatibility issues
+- Missing GroqClient dependency
+
+---
+
+## v1.0.14 (2026-01-30)
+
+### Changed
+- Improved CLI startup sequence
+- Better dependency management
+
+---
+
+## v1.0.13 (2026-01-30)
+
+### Added
+
+**Pattern Learning System**:
+- Pattern learning engine for project-specific patterns
+- Suggestion ranking based on historical acceptance
+- Interactive feedback collection
+
+**CLI Enhancements**:
+- Welcome animation with system checks
+- Interactive dashboard
+- Enhanced help formatter
+
+**Performance**:
+- AST caching for faster analysis
+- Incremental analysis (only changed files)
+- Parallel processing support
+
+**Backup & Rollback**:
+- Git-integrated safety system
+- Automatic backups before refactoring
+
+### Fixed
+- Numerous linting and type-checking issues
+- Python 3.8 compatibility improvements
+
+---
+
+## v1.0.1 (2025-12-28)
+
+### Added
+
+**New Analyzers**:
+- Security: SQL injection, SSRF, weak crypto
+- Performance: N+1 queries, inefficient loops
+- Complexity: Nested loops, method chains
+
+**False Positive Reduction**:
+- Context-aware security analysis
+- Confidence scoring for issues
+- Rule whitelisting
+
+**Test Coverage**:
+- 96.8% coverage for analyzer modules
+- Comprehensive edge case tests
+
+---
+
+## v1.0.0 (2025-10-27)
+
+### 🎉 Major Release - Production Ready!
+
+**Auto-fix System**:
+- 14 automatic fixers for common issues
+- Atomic file writes for safety
+- Automatic backups and rollback
+- Safety levels (safe/low/moderate/high)
+
+**Fixers Include**:
+- Remove unused imports
+- Extract magic numbers
+- Add missing docstrings
+- Simplify boolean expressions
+- Convert to f-strings
+
+### Test Coverage
+- 135 tests (81% coverage)
+- Production-ready quality
+
+---
+
+## v0.1.0-beta (2025-10-25)
+
+### 🎉 Initial Beta Release
+
+**Core Features**:
+- Plugin-based analyzer system
+- Refactoring suggestion engine
+- Risk scoring (0.0-1.0 scale)
+- YAML configuration
+- Rich CLI interface
+
+**Analyzers** (8 total):
+- Complexity, Code Smell, Security
+- Dependency, Dead Code, Type Hints
+- Extract Method, Performance
+
+**Refactorers** (6 total  ):
+- Extract constants
+- Reduce parameters
+- Simplify conditionals
+- Add docstrings
+- Extract methods
+
+### Performance
+- 4,300 lines/second analysis speed
+- CI/CD ready
+- Fast pre-commit hooks
+
+---
+
+## Version History
+
+| Version | Date | Status | Highlights |
+|---------|------|--------|------------|
+| 1.0.15 | 2026-02-08 | **Stable** | AI/LLM integration, RAG system |
+| 1.0.14 | 2026-01-30 | **Stable** | CLI improvements |
+| 1.0.13 | 2026-01-30 | **Stable** | Pattern learning, performance |
+| 1.0.1 | 2025-12-28 | **Stable** | New analyzers, test coverage |
+| 1.0.0 | 2025-10-27 | **Stable** | Auto-fix system |
+| 0.1.0 | 2025-10-25 | **Beta** | Initial release |
+
+---
+
+## What's Next
+
+### Upcoming Features
+- Advanced pattern recognition
+- VS Code extension
+- PyCharm plugin
+- Custom rule engine
+- Performance profiling improvements
+
+Stay tuned for more updates!

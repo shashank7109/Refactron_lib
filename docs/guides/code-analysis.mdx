@@ -1,0 +1,305 @@
+---
+title: Code Analysis
+description: 'Comprehensive code analysis features in Refactron'
+---
+
+## Overview
+
+Refactron provides comprehensive static analysis to identify security vulnerabilities, code quality issues, complexity problems, and performance bottlenecks in your Python code.
+
+## Running Analysis
+
+### Basic Analysis
+
+```bash
+# Analyze a single file
+refactron analyze myfile.py
+
+# Analyze entire directory
+refactron analyze myproject/
+
+# Show detailed output
+refactron analyze myproject/ --detailed
+```
+
+### Python API
+
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+analysis = refactron.analyze("myproject/")
+
+# Print summary
+print(f"Files analyzed: {analysis.summary['files_analyzed']}")
+print(f"Total issues: {analysis.summary['total_issues']}")
+
+# Access issues by severity
+for issue in analysis.issues:
+    if issue.level.value == "CRITICAL":
+        print(f"{issue.message} at line {issue.line_number}")
+```
+
+## Analysis Categories
+
+<AccordionGroup>
+  <Accordion icon="shield" title="Security Scanning">
+    Detects critical security vulnerabilities:
+    - **SQL Injection**: Unsafe database queries
+    - **Code Injection**: Use of `eval()` and `exec()`
+    - **Hardcoded Secrets**: API keys, passwords in code
+    - **SSRF Vulnerabilities**: Unsafe URL handling
+    
+    ```python
+    # ❌ Security issue detected
+    query = f"SELECT * FROM users WHERE id = {user_id}"  # SQL injection
+    eval(user_input)  # Code injection
+    API_KEY = "hardcoded-secret-123"  # Hardcoded secret
+    ```
+  </Accordion>
+  
+  <Accordion icon="code" title="Code Quality">
+    Identifies code smells and maintainability issues:
+    - **Magic Numbers**: Unexplained numeric constants
+    - **Long Functions**: Functions exceeding length threshold
+    - **Excessive Parameters**: Too many function parameters
+    - **Deep Nesting**: Complex nested control structures
+    
+    ```python
+    # ❌ Code quality issues
+    def process(a, b, c, d, e, f, g):  # Too many parameters
+        if condition1:
+            if condition2:
+                if condition3:
+                    if condition4:  # Deep nesting
+                        return 42  # Magic number
+    ```
+  </Accordion>
+  
+  <Accordion icon="chart-line" title="Complexity Metrics">
+    Measures code complexity:
+    - **Cyclomatic Complexity**: Control flow complexity
+    - **Cognitive Complexity**: Human readability complexity
+    - **Maintainability Index**: Overall maintainability score
+    - **Nested Loops**: Performance-impacting nested iterations
+    
+    ```python
+    # ❌ High complexity
+    def complex_function(data):
+        for item in data:
+            for sub in item:
+                if sub.type == 'A':
+                    for val in sub.values:
+                        # Nested loops = high complexity
+                        process(val)
+    ```
+  </Accordion>
+  
+  <Accordion icon="file-code" title="Type Hints">
+    Checks type annotation coverage:
+    - Missing function type hints
+    - Incomplete parameter annotations
+    - Missing return type annotations
+    
+    ```python
+    # ❌ Missing type hints
+    def calculate(x, y):  # No type hints
+        return x + y
+    
+    # ✅ Properly typed
+    def calculate(x: int, y: int) -> int:
+        return x + y
+    ```
+  </Accordion>
+  
+  <Accordion icon="trash" title="Dead Code Detection">
+    Finds unused and unreachable code:
+    - Unused variables
+    - Unused functions
+    - Unreachable code blocks
+    
+    ```python
+    # ❌ Dead code
+    def process():
+        result = expensive_calculation()  # Unused variable
+        return None
+    
+    def unused_function():  # Never called
+        pass
+    
+    def example():
+        return True
+        print("Never executed")  # Unreachable
+    ```
+  </Accordion>
+  
+  <Accordion icon="link" title="Dependency Analysis">
+    Analyzes import patterns:
+    - Circular imports
+    - Wildcard imports
+    - Deprecated modules
+    
+    ```python
+    # ❌ Dependency issues
+    from module_a import *  # Wildcard import
+    import deprecated_lib  # Deprecated
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Severity Levels
+
+Issues are categorized by severity:
+
+<CardGroup cols={4}>
+  <Card title="CRITICAL" icon="triangle-exclamation" color="#dc2626">
+    Security vulnerabilities requiring immediate attention
+  </Card>
+  <Card title="ERROR" icon="circle-xmark" color="#ea580c">
+    Significant problems affecting functionality
+  </Card>
+  <Card title="WARNING" icon="circle-exclamation" color="#f59e0b">
+    Code quality issues to address
+  </Card>
+  <Card title="INFO" icon="circle-info" color="#3b82f6">
+    Suggestions for improvement
+  </Card>
+</CardGroup>
+
+## Filtering Results
+
+### By Severity
+
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+analysis = refactron.analyze("myproject/")
+
+# Filter by severity
+critical = [i for i in analysis.issues if i.level.value == "CRITICAL"]
+errors = [i for i in analysis.issues if i.level.value == "ERROR"]
+warnings = [i for i in analysis.issues if i.level.value == "WARNING"]
+```
+
+### By Category
+
+```python
+security_issues = [i for i in analysis.issues if i.category == "SECURITY"]
+complexity_issues = [i for i in analysis.issues if i.category == "COMPLEXITY"]
+```
+
+## Generating Reports
+
+### JSON Report
+
+```bash
+refactron report myproject/ --format json -o report.json
+```
+
+### HTML Report
+
+```bash
+refactron report myproject/ --format html -o report.html
+```
+
+### Custom Report Format
+
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+analysis = refactron.analyze("myproject/")
+
+# Create custom report
+report = {
+    "summary": analysis.summary,
+    "critical_issues": [
+        {
+            "file": issue.file_path,
+            "line": issue.line_number,
+            "message": issue.message
+        }
+        for issue in analysis.issues
+        if issue.level.value == "CRITICAL"
+    ]
+}
+```
+
+## Configuration
+
+Customize analysis behavior in `.refactron.yaml`:
+
+```yaml .refactron.yaml
+# Enable specific analyzers
+enabled_analyzers:
+  - security
+  - complexity
+  - code_smell
+  - type_hint
+  - dead_code
+  - dependency
+
+# Set thresholds
+max_function_complexity: 10
+max_function_length: 50
+max_parameters: 5
+max_nesting_depth: 3
+
+# Exclude patterns
+exclude_patterns:
+  - "*/tests/*"
+  - "*/venv/*"
+```
+
+## Ignoring Issues
+
+### Inline Ignores
+
+```python
+def my_function():  # refactron: ignore
+    # Entire function ignored
+    pass
+
+x = 42  # refactron: ignore magic-number
+# Only magic-number check ignored
+```
+
+### Configuration-Based Excludes
+
+```yaml .refactron.yaml
+exclude_patterns:
+  - "*/migrations/*"
+  - "*/legacy/*"
+```
+
+## Performance Tips
+
+<Tip>
+  For large codebases, analyze specific modules separately to get faster results
+</Tip>
+
+```bash
+# Analyze specific modules
+refactron analyze src/module1/
+refactron analyze src/module2/
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Refactoring Guide"
+    icon="wrench"
+    href="/guides/refactoring"
+  >
+    Learn how to fix issues automatically
+  </Card>
+  <Card
+    title="CLI Reference"
+    icon="terminal"
+    href="/cli/commands"
+  >
+    Explore all CLI commands
+  </Card>
+</CardGroup>

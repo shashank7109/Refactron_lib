@@ -1,0 +1,543 @@
+---
+title: CLI Commands
+description: 'Complete command-line interface reference'
+---
+
+## Overview
+
+Refactron provides a comprehensive CLI for code analysis, refactoring, AI features, and more.
+
+## Core Commands
+
+### analyze
+
+Analyze code for issues.
+
+```bash
+refactron analyze <path> [options]
+```
+
+**Options:**
+- `--detailed` - Show detailed analysis output
+- `--summary` - Show summary only
+- `--config FILE` - Use custom config file
+
+**Examples:**
+```bash
+# Analyze single file
+refactron analyze myfile.py
+
+# Analyze directory with details
+refactron analyze myproject/ --detailed
+```
+
+---
+
+### refactor
+
+Preview or apply refactoring suggestions.
+
+```bash
+refactron refactor <path> [options]
+```
+
+**Options:**
+- `--preview` - Preview changes without applying
+- `--type TYPE` - Filter by operation type (can use multiple)
+- `--risk-level LEVEL` - Filter by risk: safe, low, moderate, high
+- `--ai` - Enable AI-powered refactoring
+- `--feedback` - Enable interactive feedback
+
+**Examples:**
+```bash
+# Preview all refactorings
+refactron refactor myfile.py --preview
+
+# Apply specific types only
+refactron refactor myfile.py --type extract_constant --type add_docstring
+
+# AI-powered refactoring
+refactron refactor myfile.py --ai --preview
+```
+
+---
+
+### autofix
+
+Apply automated fixes.
+
+```bash
+refactron autofix <path> [options]
+```
+
+**Options:**
+- `--preview` - Preview auto-fixes
+- `--apply` - Apply auto-fixes
+- `--no-backup` - Don't create backups
+
+**Examples:**
+```bash
+# Preview auto-fixes
+refactron autofix myfile.py --preview
+
+# Apply safe fixes
+refactron autofix myfile.py --apply
+```
+
+---
+
+### report
+
+Generate analysis reports.
+
+```bash
+refactron report <path> [options]
+```
+
+**Options:**
+- `--format FORMAT` - Output format: json, html, text
+- `-o FILE` - Output file path
+
+**Examples:**
+```bash
+# JSON report
+refactron report myproject/ --format json -o report.json
+
+# HTML report
+refactron report my project/ --format html -o report.html
+```
+
+---
+
+## AI Commands
+
+### suggest
+
+Get AI-powered suggestions for specific lines.
+
+```bash
+refactron suggest <path> [options]
+```
+
+**Options:**
+- `--line N` - Target specific line number
+- `--apply` - Apply suggestion immediately
+
+**Examples:**
+```bash
+# Get suggestion for line 42
+refactron suggest myfile.py --line 42
+
+# Apply AI suggestion
+refactron suggest myfile.py --line 42 --apply
+```
+
+---
+
+### document
+
+Generate AI-powered documentation.
+
+```bash
+refactron document <path> [options]
+```
+
+**Options:**
+- `--apply` - Apply generated docstrings
+
+**Examples:**
+```bash
+# Preview documentation
+refactron document myfile.py
+
+# Apply documentation
+refactron document myfile.py --apply
+```
+
+---
+
+### rag
+
+Manage RAG (Retrieval-Augmented Generation) index.
+
+```bash
+refactron rag <command> [options]
+```
+
+**Commands:**
+- `index` - Index codebase for RAG
+- `search` - Search indexed code
+- `status` - Show index status
+
+**Options:**
+- `--summarize` - Generate AI summaries when indexing
+- `--rerank` - Use AI reranking for search
+- `--update` - Incremental index update
+- `--force` - Force full re-index
+
+**Examples:**
+```bash
+# Index codebase
+refactron rag index
+
+# Index with AI summaries
+refactron rag index --summarize
+
+# Search code
+refactron rag search "authentication logic"
+
+# Search with reranking
+refactron rag search "database queries" --rerank
+
+# Check status
+refactron rag status
+```
+
+---
+
+## Pattern Learning Commands
+
+### feedback
+
+Record feedback on refactoring operations.
+
+```bash
+refactron feedback <operation-id> --action <action> [options]
+```
+
+**Options:**
+- `--action ACTION` - accepted, rejected, or ignored
+- `--reason TEXT` - Reason for feedback
+
+**Examples:**
+```bash
+# Accept a suggestion
+refactron feedback op-123 --action accepted
+
+# Reject with reason
+refactron feedback op-456 --action rejected --reason "Breaks API contract"
+```
+
+---
+
+### patterns
+
+Manage pattern learning system.
+
+```bash
+refactron patterns <command>
+```
+
+**Commands:**
+- `analyze` - Analyze project patterns
+- `recommend` - Get tuning recommendations
+- `tune` - Apply pattern tuning
+- `profile` - View current pattern profile
+
+**Options:**
+- `--auto` - Auto-apply recommendations (for tune command)
+
+**Examples:**
+```bash
+# Analyze patterns
+refactron patterns analyze
+
+# Get recommendations
+refactron patterns recommend
+
+# Auto-tune
+refactron patterns tune --auto
+
+# View profile
+refactron patterns profile
+```
+
+---
+
+## Authentication & Repository
+
+### auth
+
+Manage authentication.
+
+```bash
+refactron auth <command>
+```
+
+**Commands:**
+- `status` - Check authentication status
+- `logout` - Log out from account
+
+**Examples:**
+```bash
+# Check auth status
+refactron auth status
+
+# Logout
+refactron auth logout
+```
+
+---
+
+### repo
+
+Manage repository connections.
+
+```bash
+refactron repo <command> [options]
+```
+
+**Commands:**
+- `list` - List connected repositories
+- `connect` - Connect a repository
+- `disconnect` - Disconnect a repository
+
+**Options:**
+- `--path PATH` - Repository path (for connect)
+- `--delete-files` - Delete local files (for disconnect)
+
+**Examples:**
+```bash
+# List repos
+refactron repo list
+
+# Connect repo
+refactron repo connect my-repo --path /path/to/repo
+
+# Disconnect repo
+refactron repo disconnect my-repo
+```
+
+---
+
+## Backup & Rollback
+
+### rollback
+
+Rollback refactoring changes.
+
+```bash
+refactron rollback [options]
+```
+
+**Options:**
+- `--list` - List available rollback sessions
+- `--session ID` - Rollback specific session
+
+**Examples:**
+```bash
+# List sessions
+refactron rollback --list
+
+# Rollback session
+refactron rollback --session abc123
+```
+
+---
+
+## CI/CD Integration
+
+### ci
+
+Generate CI/CD configuration.
+
+```bash
+refactron ci <platform>
+```
+
+**Platforms:**
+- `github` - GitHub Actions workflow
+- `gitlab` - GitLab CI configuration
+- `pre-commit` - Pre-commit hooks
+
+**Examples:**
+```bash
+# Generate GitHub Actions
+refactron ci github
+
+# Generate GitLab CI
+refactron ci gitlab
+
+# Generate pre-commit hooks
+refactron ci pre-commit
+```
+
+---
+
+## Observability
+
+### metrics
+
+View usage metrics.
+
+```bash
+refactron metrics [options]
+```
+
+**Options:**
+- `--format FORMAT` - Output format: json, text
+
+**Examples:**
+```bash
+# View metrics
+refactron metrics
+
+# JSON format
+refactron metrics --format json
+```
+
+---
+
+### serve-metrics
+
+Start Prometheus metrics server.
+
+```bash
+refactron serve-metrics [options]
+```
+
+**Options:**
+- `--port N` - Server port (default: 8000)
+
+**Examples:**
+```bash
+# Start metrics server
+refactron serve-metrics
+
+# Custom port
+refactron serve-metrics --port 9090
+```
+
+---
+
+### telemetry
+
+Manage telemetry settings.
+
+```bash
+refactron telemetry <command>
+```
+
+**Commands:**
+- `enable` - Enable telemetry
+- `disable` - Disable telemetry
+- `status` - Show telemetry status
+
+**Examples:**
+```bash
+# Check status
+refactron telemetry status
+
+# Disable telemetry
+refactron telemetry disable
+```
+
+---
+
+## Configuration
+
+### init
+
+Initialize Refactron configuration.
+
+```bash
+refactron init
+```
+
+Creates `.refactron.yaml` in current directory with default settings.
+
+---
+
+## Global Options
+
+Available for all commands:
+
+- `--help` - Show help message
+- `--version` - Show version
+- `--config FILE` - Use custom config file
+- `--log-level LEVEL` - Set log level (DEBUG, INFO, WARNING, ERROR)
+
+**Examples:**
+```bash
+# Show version
+refactron --version
+
+# Custom config
+refactron analyze myfile.py --config custom-config.yaml
+
+# Debug logging
+refactron analyze myfile.py --log-level DEBUG
+```
+
+---
+
+## Environment Variables
+
+```bash
+# Disable color output
+export REFACTRON_NO_COLOR=1
+
+# Set log level
+export REFACTRON_LOG_LEVEL=DEBUG
+
+# Custom config path
+export REFACTRON_CONFIG=/path/to/.refactron.yaml
+
+# API keys
+export GROQ_API_KEY=your-key
+export REFACTRON_API_KEY=your-key
+```
+
+---
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success, no issues found |
+| 1 | Issues found |
+| 2 | Error during execution |
+
+---
+
+## Quick Reference
+
+```bash
+# Analysis workflow
+refactron analyze myproject/
+refactron report myproject/ --format json -o report.json
+
+# Refactoring workflow
+refactron refactor myfile.py --preview
+ref actron refactor myfile.py --type extract_constant
+refactron rollback --list
+
+# AI workflow
+refactron rag index
+refactron refactor myfile.py --ai --preview
+refactron suggest myfile.py --line 42
+
+# Pattern learning
+refactron feedback op-123 --action accepted
+refactron patterns analyze
+refactron patterns tune --auto
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api-reference/overview"
+  >
+    Python API documentation
+  </Card>
+  <Card
+    title="Configuration Guide"
+    icon="gear"
+    href="/essentials/configuration"
+  >
+    Configure Refactron settings
+  </Card>
+</CardGroup>

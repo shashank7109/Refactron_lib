@@ -26,6 +26,31 @@ refactron refactor <path>
 
 # Generate report
 refactron report <path> --format json -o report.json
+
+# AI-Powered Commands (v1.0.15)
+refactron suggest <path> [--line N] [--apply]
+refactron document <path> [--apply]
+refactron feedback <op-id> --action accepted
+refactron rag index [--summarize]
+refactron rag search "query" [--rerank]
+refactron rag status
+
+# Repository Management (v1.0.15)
+refactron repo list
+refactron repo connect <repo-name> [--path PATH]
+refactron repo disconnect <repo-name> [--delete-files]
+
+# CI/CD & Integration (v1.0.15)
+refactron ci <github|gitlab|pre-commit>
+
+# Authentication & Status (v1.0.15)
+refactron auth status
+refactron auth logout
+
+# Observability (v1.0.15)
+refactron metrics [--format json]
+refactron serve-metrics [--port N]
+refactron telemetry <enable|disable|status>
 ```
 
 ### Python API
@@ -185,6 +210,11 @@ export REFACTRON_LOG_LEVEL=DEBUG
 --type TYPE         # Filter by type (can use multiple)
 --no-backup         # Don't create backups
 --risk-level LEVEL  # safe|low|moderate|high
+
+# AI (v1.0.15)
+--ai               # Use AI reasoning for refactoring
+--summarize        # Generate AI summaries for RAG chunks
+--rerank           # AI reranking for semantic search
 ```
 
 ## Common Issues
@@ -222,6 +252,8 @@ refactron patterns --help  # Pattern analysis and tuning commands
 
 - 📚 [Full Documentation](https://refactron-ai.github.io/Refactron_lib/)
 - 🚀 [Tutorial](TUTORIAL.md)
+- 🤖 [LLM & RAG Guide](LLM_RAG_INTEGRATION.md)
+- 📜 [v1.0.15 Release Notes](v1.0.15_RELEASE_NOTES.md)
 - 🏗️ [Architecture](../ARCHITECTURE.md)
 - 🤝 [Contributing](../CONTRIBUTING.md)
 - 🔒 [Security](../SECURITY.md)

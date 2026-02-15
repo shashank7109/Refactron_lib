@@ -1,0 +1,187 @@
+---
+title: Configuration
+description: 'Configure Refactron for your project'
+---
+
+## Configuration File
+
+Refactron uses a `.refactron.yaml` file to configure analyzers, refactorers, and thresholds.
+
+### Initialize Configuration
+
+Generate a default configuration file:
+
+```bash
+refactron init
+```
+
+This creates `.refactron.yaml` in your project root.
+
+## Configuration Options
+
+### Basic Configuration
+
+```yaml .refactron.yaml
+# Analyzers to run
+enabled_analyzers:
+  - complexity
+  - code_smell
+  - security
+  - type_hint
+  - dead_code
+  - dependency
+
+# Refactorers to use
+enabled_refactorers:
+  - extract_constant
+  - add_docstring
+  - simplify_conditionals
+  - reduce_parameters
+
+# Thresholds
+max_function_complexity: 10
+max_function_length: 50
+max_parameters: 5
+max_nesting_depth: 3
+```
+
+### Pattern Learning
+
+Enable pattern learning to improve suggestions over time:
+
+```yaml .refactron.yaml
+# Pattern Learning (optional)
+enable_pattern_learning: true
+pattern_learning_enabled: true
+pattern_ranking_enabled: true
+pattern_storage_dir: null  # null = auto-detect
+```
+
+<Info>
+  Learn more about pattern learning in the [Pattern Learning Guide](/guides/pattern-learning)
+</Info>
+
+## Available Analyzers
+
+<AccordionGroup>
+  <Accordion icon="shield" title="security">
+    Detects security vulnerabilities like SQL injection, code injection, hardcoded secrets, and SSRF
+  </Accordion>
+  
+  <Accordion icon="code" title="code_smell">
+    Identifies magic numbers, long functions, excessive parameters, and deep nesting
+  </Accordion>
+  
+  <Accordion icon="chart-line" title="complexity">
+    Measures cyclomatic complexity, maintainability index, and nested loops
+  </Accordion>
+  
+  <Accordion icon="file-code" title="type_hint">
+    Checks for missing or incomplete type annotations
+  </Accordion>
+  
+  <Accordion icon="trash" title="dead_code">
+    Finds unused functions and unreachable code
+  </Accordion>
+  
+  <Accordion icon="link" title="dependency">
+    Analyzes circular imports and wildcard imports
+  </Accordion>
+</AccordionGroup>
+
+## Available Refactorers
+
+<AccordionGroup>
+  <Accordion title="extract_constant">
+    Extract magic numbers into named constants
+  </Accordion>
+  
+  <Accordion title="add_docstring">
+    Add missing docstrings to functions and classes
+  </Accordion>
+  
+  <Accordion title="simplify_conditionals">
+    Simplify complex conditional statements
+  </Accordion>
+  
+  <Accordion title="reduce_parameters">
+    Reduce function parameter count using dataclasses or dictionaries
+  </Accordion>
+</AccordionGroup>
+
+## Threshold Configuration
+
+Adjust thresholds to match your project's standards:
+
+```yaml .refactron.yaml
+# Complexity thresholds
+max_function_complexity: 15        # Default: 10
+max_function_length: 100           # Default: 50
+max_parameters: 7                  # Default: 5
+max_nesting_depth: 4              # Default: 3
+
+# Code quality thresholds
+min_maintainability_index: 60     # Default: 65
+max_cognitive_complexity: 20      # Default: 15
+```
+
+## Exclude Patterns
+
+Exclude files or directories from analysis:
+
+```yaml .refactron.yaml
+exclude_patterns:
+  - "*/tests/*"
+  - "*/migrations/*"
+  - "*/venv/*"
+  - "*.pyc"
+  - "__pycache__"
+```
+
+## Environment Variables
+
+Configure Refactron using environment variables:
+
+```bash
+# Disable color output
+export REFACTRON_NO_COLOR=1
+
+# Set log level (DEBUG, INFO, WARNING, ERROR)
+export REFACTRON_LOG_LEVEL=DEBUG
+
+# Custom config path
+export REFACTRON_CONFIG=/path/to/.refactron.yaml
+```
+
+## Per-File Ignores
+
+Ignore specific issues in code using comments:
+
+```python
+def my_function():  # refactron: ignore
+    # This entire function will be ignored
+    pass
+
+def another_function():
+    x = 42  # refactron: ignore magic-number
+    # Only magic-number check will be ignored for this line
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Authentication"
+    icon="key"
+    href="/essentials/authentication"
+  >
+    Set up authentication for cloud features
+  </Card>
+  <Card
+    title="Code Analysis Guide"
+    icon="magnifying-glass"
+    href="/guides/code-analysis"
+  >
+    Learn about analysis capabilities
+  </Card>
+</CardGroup>

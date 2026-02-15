@@ -1,0 +1,259 @@
+---
+title: CI/CD Integration
+description: 'Integrate Refactron into your CI/CD pipeline'
+---
+
+## Overview
+
+Refactron can be integrated into your CI/CD pipeline to automatically analyze code quality on every commit, pull request, or deployment.
+
+## Generate CI/CD Templates
+
+Refactron can generate ready-to-use CI/CD configuration files:
+
+```bash
+# GitHub Actions
+refactron ci github
+
+# GitLab CI
+refactron ci gitlab
+
+# Pre-commit hooks
+refactron ci pre-commit
+
+# Generate all
+refactron ci all
+```
+
+## GitHub Actions
+
+### Basic Workflow
+
+```yaml .github/workflows/refactron.yml
+name: Refactron Analysis
+
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      
+      - name: Install Refactron
+        run: pip install refactron
+      
+      - name: Analyze Code
+        run: refactron analyze . --log-format json
+```
+
+### Fail on Critical Issues
+
+```yaml
+- name: Analyze Code
+  run: |
+    refactron analyze . --log-format json || exit_code=$?
+    if [ $exit_code -eq 1 ]; then
+      echo "Critical issues found!"
+      exit 1
+    fi
+```
+
+## GitLab CI
+
+### Basic Configuration
+
+```yaml .gitlab-ci.yml
+refactron:
+  image: python:3.9
+  before_script:
+    - pip install refactron
+  script:
+    - refactron analyze . --log-format json
+  only:
+    - merge_requests
+    - main
+```
+
+### With Artifacts
+
+```yaml
+refactron:
+  image: python:3.9
+  before_script:
+    - pip install refactron
+  script:
+    - refactron report . --format html -o report.html
+  artifacts:
+    paths:
+      - report.html
+    expire_in: 1 week
+```
+
+## Pre-commit Hooks
+
+### Installation
+
+```bash
+# Generate pre-commit config
+refactron ci pre-commit
+
+# Install pre-commit
+pip install pre-commit
+pre-commit install
+```
+
+### Configuration
+
+```.pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: refactron
+        name: Refactron Analysis
+        entry: refactron analyze
+        language: system
+        pass_filenames: false
+        always_run: true
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use JSON Logging">
+    Enable JSON logging for easier parsing in CI/CD:
+    ```bash
+    refactron analyze . --log-format json
+    ```
+  </Accordion>
+  
+  <Accordion title="Configure Failure Thresholds">
+    Fail builds based on severity:
+    ```yaml
+    # .refactron.yaml
+    fail_on_critical: true
+    fail_on_errors: false
+    max_critical_issues: 0
+    max_error_issues: 10
+    ```
+  </Accordion>
+  
+  <Accordion title="Cache Dependencies">
+    Speed up CI runs by caching pip packages:
+    ```yaml
+    # GitHub Actions
+    - uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-refactron
+    ```
+  </Accordion>
+  
+  <Accordion title="Generate Reports">
+    Create HTML reports and save as artifacts:
+    ```bash
+    refactron report . --format html -o report.html
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Environment-Specific Configuration
+
+### Development
+
+```yaml .refactron.yaml
+log_level: DEBUG
+fail_on_critical: false
+fail_on_errors: false
+```
+
+### CI/CD
+
+```yaml .refactron.yaml
+log_level: INFO
+log_format: json
+fail_on_critical: true
+fail_on_errors: false
+max_critical_issues: 0
+```
+
+### Production
+
+```yaml .refactron.yaml
+log_level: WARNING
+log_format: json
+fail_on_critical: true
+fail_on_errors: true
+max_critical_issues: 0
+max_error_issues: 5
+```
+
+## Advanced Patterns
+
+### Incremental Analysis
+
+Only analyze changed files in CI:
+
+```yaml
+- name: Get Changed Files
+  id: changed
+  run: |
+    if [ "${{ github.event_name }}" == "pull_request" ]; then
+      FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.py$' || true)
+    else
+      FILES=$(git diff --name-only HEAD~1..HEAD | grep '\.py$' || true)
+    fi
+    echo "files=$FILES" >> $GITHUB_OUTPUT
+
+- name: Analyze Changed Files
+  if: steps.changed.outputs.files != ''
+  run: |
+    for file in ${{ steps.changed.outputs.files }}; do
+      refactron analyze "$file"
+    done
+```
+
+### Parallel Analysis
+
+Run analysis in parallel for faster CI:
+
+```yaml .refactron.yaml
+enable_parallel_processing: true
+max_parallel_workers: 4
+```
+
+## Exit Codes
+
+Refactron uses standard exit codes:
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success, no issues |
+| 1 | Issues found |
+| 2 | Error during execution |
+
+Use these to control CI behavior:
+
+```bash
+refactron analyze . || exit_code=$?
+if [ $exit_code -gt 1 ]; then
+  echo "Refactron error!"
+  exit $exit_code
+fi
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration Guide" icon="gear" href="/essentials/configuration">
+    Configure Refactron for CI/CD
+  </Card>
+  <Card title="Monitoring Guide" icon="chart-line" href="/advanced/monitoring">
+    Monitor Refactron in production
+  </Card>
+</CardGroup>

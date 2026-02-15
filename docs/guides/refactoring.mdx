@@ -1,0 +1,337 @@
+---
+title: Refactoring
+description: 'Automated refactoring and code transformation'
+---
+
+## Overview
+
+Refactron provides intelligent refactoring suggestions with safety previews, risk scoring, and automated fixes. All refactorings include backup and rollback capabilities.
+
+## Basic Refactoring
+
+### Preview Changes
+
+Always preview refactoring suggestions before applying:
+
+```bash
+refactron refactor myfile.py --preview
+```
+
+### Apply Refactoring
+
+Apply all suggested refactorings:
+
+```bash
+refactron refactor myfile.py
+```
+
+<Warning>
+  Refactoring modifies your code. Always preview changes first and ensure you have backups or version control.
+</Warning>
+
+## Available Refactorers
+
+<AccordionGroup>
+  <Accordion title="Extract Constant">
+    Replaces magic numbers with named constants
+    
+    ```python
+    # Before
+    def calculate_tax(amount):
+        return amount * 0.18
+    
+    # After
+    TAX_RATE = 0.18
+    
+    def calculate_tax(amount):
+        return amount * TAX_RATE
+    ```
+  </Accordion>
+  
+  <Accordion title="Add Docstring">
+    Adds missing docstrings to functions and classes
+    
+    ```python
+    # Before
+    def calculate_total(items):
+        return sum(item.price for item in items)
+    
+    # After
+    def calculate_total(items):
+        """Calculate total price for list of items.
+        
+        Args:
+            items: List of items with price attribute
+            
+        Returns:
+            Total sum of item prices
+        """
+        return sum(item.price for item in items)
+    ```
+  </Accordion>
+  
+  <Accordion title="Simplify Conditionals">
+    Refactors complex conditional expressions
+    
+    ```python
+    # Before
+    if not (x < 10 or x > 20):
+        process()
+    
+    # After
+    if 10 <= x <= 20:
+        process()
+    ```
+  </Accordion>
+  
+  <Accordion title="Reduce Parameters">
+    Reduces function parameters using dataclasses or dicts
+    
+    ```python
+    # Before
+    def create_user(name, email, age, city, country):
+        pass
+    
+    # After
+    from dataclasses import dataclass
+    
+    @dataclass
+    class UserData:
+        name: str
+        email: str
+        age: int
+        city: str
+        country: str
+    
+    def create_user(user: UserData):
+        pass
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Risk Levels
+
+Refactoring suggestions include risk scores:
+
+<CardGroup cols={4}>
+  <Card title="Safe (0.0)" icon="check" color="#10b981">
+    Formatting, imports only
+  </Card>
+  <Card title="Low (0.1-0.2)" icon="circle-check" color="#3b82f6">
+    Documentation, constants
+  </Card>
+  <Card title="Moderate (0.3-0.5)" icon="circle-exclamation" color="#f59e0b">
+    Logic changes
+  </Card>
+  <Card title="High (0.6-1.0)" icon="triangle-exclamation" color="#dc2626">
+    Complex transformations
+  </Card>
+</CardGroup>
+
+## Filter by Risk Level
+
+```bash
+# Only apply safe refactorings
+refactron refactor myfile.py --risk-level safe
+
+# Apply safe and low-risk refactorings
+refactron refactor myfile.py --risk-level low
+```
+
+## Specific Refactorings
+
+Apply only specific types of refactoring:
+
+```bash
+# Only extract constants
+refactron refactor myfile.py --type extract_constant
+
+# Multiple types
+refactron refactor myfile.py --type extract_constant --type add_docstring
+```
+
+## Python API
+
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+
+# Preview refactoring
+result = refactron.refactor("myfile.py", preview=True)
+result.show_diff()
+
+# Apply specific refactorings
+result = refactron.refactor(
+    "myfile.py",
+    preview=False,
+    operation_types=["extract_constant", "add_docstring"]
+)
+
+if result.success:
+    print(f"Applied {len(result.operations)} refactorings")
+    print(f"Backup: {result.backup_path}")
+```
+
+## Auto-Fix
+
+The `autofix` command applies safe, automated fixes:
+
+```bash
+# Preview auto-fixes
+refactron autofix myfile.py --preview
+
+# Apply auto-fixes
+refactron autofix myfile.py --apply
+```
+
+Auto-fix includes 14 automated fixers for common issues.
+
+## Backup and Rollback
+
+Every refactoring creates automatic backups:
+
+### List Rollback Sessions
+
+```bash
+refactron rollback --list
+```
+
+### Rollback Specific Session
+
+```bash
+refactron rollback --session <session-id>
+```
+
+### Python API Rollback
+
+```python
+from refactron.autofix.file_ops import FileOperations
+
+file_ops = FileOperations()
+
+# Rollback one file
+file_ops.rollback_file("myfile.py")
+
+# Rollback all changes
+file_ops.rollback_all()
+```
+
+## Refactoring Workflow
+
+<Steps>
+  <Step title="Analyze">
+    First, analyze your code to identify issues
+    ```bash
+    refactron analyze myproject/
+    ```
+  </Step>
+  
+  <Step title="Preview">
+    Preview refactoring suggestions
+    ```bash
+    refactron refactor myproject/ --preview
+    ```
+  </Step>
+  
+  <Step title="Review">
+    Review the diff output and risk scores
+  </Step>
+  
+  <Step title="Apply">
+    Apply refactorings you want to keep
+    ```bash
+    refactron refactor myproject/ --type extract_constant
+    ```
+  </Step>
+  
+  <Step title="Test">
+    Run your tests to ensure nothing broke
+  </Step>
+  
+  <Step title="Rollback (if needed)">
+    Rollback if something went wrong
+    ```bash
+    refactron rollback --session <id>
+    ```
+  </Step>
+</Steps>
+
+## Configuration
+
+Configure refactoring behavior in `.refactron.yaml`:
+
+```yaml .refactron.yaml
+# Enable specific refactorers
+enabled_refactorers:
+  - extract_constant
+  - add_docstring
+  - simplify_conditionals
+  - reduce_parameters
+
+# Risk tolerance
+max_risk_score: 0.5  # Don't apply refactorings with risk > 0.5
+
+# Backup settings
+create_backups: true
+backup_dir: .refactron/backups
+```
+
+## Pattern Learning Integration
+
+Refactron learns from your refactoring decisions:
+
+```bash
+# Refactor with pattern learning
+refactron refactor myfile.py --feedback
+
+# Provide explicit feedback
+refactron feedback <operation-id> --action accepted
+```
+
+<Info>
+  Learn more about pattern learning in the [Pattern Learning Guide](/guides/pattern-learning)
+</Info>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Preview First">
+    Use `--preview` to see changes before applying them
+  </Accordion>
+  
+  <Accordion title="Use Version Control">
+    Commit your code before refactoring for easy rollback
+  </Accordion>
+  
+  <Accordion title="Test After Refactoring">
+    Run your test suite after applying refactorings
+  </Accordion>
+  
+  <Accordion title="Start with Low Risk">
+    Begin with safe refactorings, then gradually increase risk tolerance
+  </Accordion>
+  
+  <Accordion title="Refactor Incrementally">
+    Refactor small portions at a time rather than entire codebase
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="AI Features"
+    icon="sparkles"
+    href="/guides/ai-features"
+  >
+    Explore AI-powered refactoring
+  </Card>
+  <Card
+    title="Pattern Learning"
+    icon="brain"
+    href="/guides/pattern-learning"
+  >
+    Learn how Refactron improves over time
+  </Card>
+</CardGroup>

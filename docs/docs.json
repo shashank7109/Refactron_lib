@@ -1,0 +1,92 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "Refactron",
+  "description": "Intelligent Python code refactoring with AI-powered suggestions and pattern learning",
+  "colors": {
+    "primary": "#10B981",
+    "light": "#ECFDF5",
+    "dark": "#065F46"
+  },
+  "fonts": {
+    "family": "Space Grotesk"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "introduction",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Essentials",
+        "pages": [
+          "essentials/installation",
+          "essentials/configuration",
+          "essentials/authentication"
+        ]
+      },
+      {
+        "group": "Guides",
+        "pages": [
+          "guides/code-analysis",
+          "guides/refactoring",
+          "guides/ai-features",
+          "guides/pattern-learning"
+        ]
+      },
+      {
+        "group": "CLI Reference",
+        "pages": [
+          "cli/commands"
+        ]
+      },
+      {
+        "group": "API Reference",
+        "pages": [
+          "api-reference/overview",
+          "api-reference/refactron-class"
+        ]
+      },
+      {
+        "group": "Advanced",
+        "pages": [
+          "advanced/performance",
+          "advanced/monitoring",
+          "advanced/ci-cd"
+        ]
+      },
+      {
+        "group": "Resources",
+        "pages": [
+          "resources/changelog",
+          "resources/faq"
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/logo.png",
+    "dark": "/logo/logo.png",
+    "href": "https://www.refactron.dev"
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Refactron-ai/Refactron_lib",
+      "x": "https://x.com/refactron",
+      "linkedin": "https://www.linkedin.com/company/refactron",
+      "discord": "https://discord.gg/HY8WawSH"
+    }
+  },
+  "favicon": "logo/logo.svg",
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
+  }
+}

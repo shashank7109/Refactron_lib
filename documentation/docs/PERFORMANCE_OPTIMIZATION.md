@@ -203,7 +203,7 @@ config = RefactronConfig(max_parallel_workers=cpu_count)
 - ✅ Large codebases (1000+ files)
 - ✅ Multi-core systems
 - ✅ I/O-bound operations
-- ❌ Small codebases (<10 files)
+- ❌ Small codebases (&lt;10 files)
 - ❌ Single-core systems
 - ❌ Memory-constrained environments
 
@@ -288,7 +288,7 @@ print(f"Results: {latest['results']}")
 
 ## Best Practices
 
-### For Small Projects (<1000 files)
+### For Small Projects (&lt;1000 files)
 
 ```python
 config = RefactronConfig(

@@ -1,0 +1,159 @@
+---
+title: Authentication
+description: 'Authenticate with Refactron cloud services'
+---
+
+## Overview
+
+Some Refactron features require authentication with cloud services:
+
+- Repository management
+- Cloud-based AI features
+- Collaborative pattern learning
+- Usage analytics
+
+## Login
+
+Authenticate using the CLI:
+
+```bash
+refactron login
+```
+
+This will open your browser to complete the authentication flow.
+
+<Note>
+  Local analysis and refactoring features work without authentication
+</Note>
+
+## Check Authentication Status
+
+Verify your authentication status:
+
+```bash
+refactron auth status
+```
+
+Expected output:
+
+```
+✓ Authenticated as user@example.com
+  Organization: my-org
+  Plan: Pro
+```
+
+## Logout
+
+To log out from your account:
+
+```bash
+refactron auth logout
+```
+
+## API Keys
+
+For CI/CD environments, use API keys instead of interactive login:
+
+### Generate API Key
+
+1. Log in via the CLI: `refactron login`
+2. Visit your dashboard
+3. Navigate to **Settings** → **API Keys**
+4. Click **Generate New Key**
+
+### Use API Key
+
+Set the API key as an environment variable:
+
+```bash
+export REFACTRON_API_KEY=your_api_key_here
+```
+
+<Warning>
+  Keep your API keys secret! Never commit them to version control.
+</Warning>
+
+## Authenticated Features
+
+Features that require authentication:
+
+<AccordionGroup>
+  <Accordion icon="database" title="Repository Management">
+    ```bash
+    refactron repo list
+    refactron repo connect my-repo
+    ```
+  </Accordion>
+  
+  <Accordion icon="sparkles" title="Cloud AI Features">
+    Enhanced AI-powered refactoring with cloud LLM models
+  </Accordion>
+  
+  <Accordion icon="chart-simple" title="Usage Analytics">
+    ```bash
+    refactron metrics
+    ```
+  </Accordion>
+  
+  <Accordion icon="share-nodes" title="Team Pattern Sharing">
+    Share learned patterns across your team
+  </Accordion>
+</AccordionGroup>
+
+## Offline Mode
+
+Refactron works offline for core features:
+
+- Local code analysis
+- Refactoring suggestions
+- Auto-fix operations
+- Report generation
+
+Cloud features gracefully degrade when offline.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Browser doesn't open">
+    If the browser doesn't open automatically:
+    1. Copy the URL from the terminal
+    2. Paste it into your browser manually
+    3. Complete the authentication
+  </Accordion>
+  
+  <Accordion title="Token expired">
+    If you see "Token expired" errors:
+    ```bash
+    refactron auth logout
+    refactron login
+    ```
+  </Accordion>
+  
+  <Accordion title="API key not working">
+    Verify the API key is set correctly:
+    ```bash
+    echo $REFACTRON_API_KEY
+    ```
+    Ensure it's exported in your shell profile.
+  </Accordion>
+</AccordionGroup>
+
+## Security
+
+<Info>
+  Refactron follows security best practices:
+  - Tokens are stored securely in your system keychain
+  - API keys are never logged or displayed
+  - All communication uses HTTPS
+  - Authentication tokens expire after 30 days
+</Info>
+
+## Next Steps
+
+<Card
+  title="Code Analysis Guide"
+  icon="magnifying-glass"
+  href="/guides/code-analysis"
+>
+  Start analyzing your code with Refactron
+</Card>

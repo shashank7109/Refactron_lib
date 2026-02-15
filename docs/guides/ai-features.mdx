@@ -1,0 +1,364 @@
+---
+title: AI Features
+description: 'LLM and RAG-powered intelligent refactoring'
+---
+
+## Overview
+
+Refactron v1.0.15+ integrates Large Language Models (LLMs) with Retrieval-Augmented Generation (RAG) to provide context-aware, intelligent code refactoring and documentation generation.
+
+## Core Components
+
+<CardGroup cols={2}>
+  <Card title="LLM Orchestrator" icon="brain">
+    Coordinates between analyzer, retriever, and LLM backends
+  </Card>
+  <Card title="RAG System" icon="database">
+    Vector database (ChromaDB) for code indexing and retrieval
+  </Card>
+  <Card title="LLM Backends" icon="server">
+    Support for Groq, local models, and custom providers
+  </Card>
+  <Card title="Safety Gate" icon="shield-check">
+    Validates LLM-generated code for syntax and safety
+  </Card>
+</CardGroup>
+
+## Setup
+
+### Prerequisites
+
+AI features require additional dependencies (already included with Refactron):
+
+- ChromaDB for vector storage
+- Sentence Transformers for embeddings
+- Groq API access (or alternative LLM provider)
+
+### Configuration
+
+Set your LLM API key:
+
+```bash
+export GROQ_API_KEY='your-api-key-here'
+```
+
+Configure LLM settings in `.refactron.yaml`:
+
+```yaml .refactron.yaml
+llm:
+  provider: groq
+  model: llama3-70b-8192
+  temperature: 0.1
+  max_tokens: 4096
+
+rag:
+  enabled: true
+  storage_dir: .refactron/rag_index
+  embedding_model: all-MiniLM-L6-v2
+```
+
+## RAG Indexing
+
+### Index Your Codebase
+
+Before using AI features, index your project:
+
+```bash
+# Basic indexing
+refactron rag index
+
+# Index with AI-generated summaries
+refactron rag index --summarize
+```
+
+This creates vector embeddings of your code for context retrieval.
+
+### Check Index Status
+
+```bash
+refactron rag status
+```
+
+Output:
+```
+✓ RAG Index Status
+  Indexed files: 142
+  Total chunks: 856
+  Last updated: 2024-02-15 10:30:42
+  Storage: .refactron/rag_index
+```
+
+### Search Codebase
+
+Semantic search across your codebase:
+
+```bash
+# Basic search
+refactron rag search "authentication logic"
+
+# With AI reranking
+refactron rag search "database connection" --rerank
+```
+
+## AI-Powered Refactoring
+
+### Enable AI Suggestions
+
+Use the `--ai` flag to enable LLM-powered refactoring:
+
+```bash
+# Preview AI refactoring suggestions
+refactron refactor myfile.py --ai --preview
+
+# Apply AI suggestions
+refactron refactor myfile.py --ai --apply
+```
+
+### How It Works
+
+<Steps>
+  <Step title="Analysis">
+    Refactron analyzes your code for issues
+  </Step>
+  
+  <Step title="Context Retrieval">
+    RAG system retrieves relevant code chunks from your project
+  </Step>
+  
+  <Step title="LLM Generation">
+    LLM generates refactoring suggestions with project context
+  </Step>
+  
+  <Step title="Safety Validation">
+    Safety gate validates syntax and checks for issues
+  </Step>
+  
+  <Step title="Presentation">
+    Suggestions presented with explanations and risk scores
+  </Step>
+</Steps>
+
+### Example
+
+```python
+# Original code with issues
+def process_users(users):
+    result = []
+    for user in users:
+        if user.age > 18:
+            if user.status == 'active':
+                if user.verified:
+                    result.append(user)
+    return result
+```
+
+AI-powered refactoring suggests:
+
+```python
+# AI-suggested refactoring
+def process_users(users):
+    """Process and filter users based on eligibility criteria.
+    
+    Args:
+        users: List of user objects to process
+        
+    Returns:
+        List of eligible users (adult, active, verified)
+    """
+    return [
+        user for user in users
+        if user.age > 18 and user.status == 'active' and user.verified
+    ]
+```
+
+## AI Documentation Generation
+
+### Generate Docstrings
+
+Automatically create docstrings using AI:
+
+```bash
+# Preview docstring generation
+refactron document myfile.py
+
+# Apply docstrings
+refactron document myfile.py --apply
+```
+
+### Line-Specific Suggestions
+
+Get AI suggestions for specific lines:
+
+```bash
+# Suggest improvements for line 42
+refactron suggest myfile.py --line 42
+
+# Apply suggestion instantly
+refactron suggest myfile.py --line 42 --apply
+```
+
+## Available LLM Providers
+
+<AccordionGroup>
+  <Accordion title="Groq (Recommended)" icon="bolt">
+    Fast, cloud-based LLM provider with free tier
+    
+    **Models:**
+    - `llama3-70b-8192` - Best quality
+    - `llama3-8b-8192` - Faster, good quality
+    - `mixtral-8x7b-32768` - Long context window
+    
+    **Setup:**
+    ```bash
+    export GROQ_API_KEY='your-key'
+    ```
+  </Accordion>
+  
+  <Accordion title="Custom Providers" icon="gear">
+    Bring your own LLM provider
+    
+    Configure in `.refactron.yaml`:
+    ```yaml
+    llm:
+      provider: custom
+      endpoint: https://your-llm-api.com/v1
+      api_key: your-key
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## RAG Workflow
+
+### How RAG Enhances Refactoring
+
+1. **Parsing**: Code files split into semantic chunks (classes, methods)
+2. **Embedding**: Chunks converted to vector representations
+3. **Indexing**: Vectors stored in ChromaDB with metadata
+4. **Retrieval**: Relevant chunks retrieved when analyzing issues
+5. **Context**: LLM receives project-specific context for better suggestions
+
+### Update Index
+
+Re-index after significant code changes:
+
+```bash
+# Update index incrementally
+refactron rag index --update
+
+# Full re-index
+refactron rag index --force
+```
+
+## Feedback and Learning
+
+Provide feedback on AI suggestions to improve quality:
+
+```bash
+# Record acceptance
+refactron feedback <operation-id> --action accepted
+
+# Record rejection with reason
+refactron feedback <operation-id> --action rejected --reason "Breaks API contract"
+```
+
+<Info>
+  AI suggestions integrate with [Pattern Learning](/guides/pattern-learning) to improve over time
+</Info>
+
+## Configuration Options
+
+<ParamField path="llm.provider" type="string" default="groq">
+  LLM provider (groq, custom)
+</ParamField>
+
+<ParamField path="llm.model" type="string" default="llama3-70b-8192">
+  Model identifier for the provider
+</ParamField>
+
+<ParamField path="llm.temperature" type="number" default="0.1">
+  Temperature for generation (0.0 - 1.0, lower = more deterministic)
+</ParamField>
+
+<ParamField path="llm.max_tokens" type="number" default="4096">
+  Maximum tokens in LLM response
+</ParamField>
+
+<ParamField path="rag.enabled" type="boolean" default="true">
+  Enable RAG system
+</ParamField>
+
+<ParamField path="rag.storage_dir" type="string" default=".refactron/rag_index">
+  Directory for RAG index storage
+</ParamField>
+
+<ParamField path="rag.embedding_model" type="string" default="all-MiniLM-L6-v2">
+  Sentence transformer model for embeddings
+</ParamField>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Index Updated">
+    Re-run `refactron rag index` after significant code changes for accurate context
+  </Accordion>
+  
+  <Accordion title="Use Higher-Parameter Models">
+    Models like Llama 3 70B provide better refactoring logic than smaller models
+  </Accordion>
+  
+  <Accordion title="Always Preview AI Suggestions">
+    Use `--preview` to review AI-generated code before applying
+  </Accordion>
+  
+  <Accordion title="Provide Feedback">
+    Record feedback to improve AI suggestions over time
+  </Accordion>
+  
+  <Accordion title="Test After Applying">
+    Run your test suite after applying AI refactorings
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="API Key Not Found">
+    Ensure `GROQ_API_KEY` is set:
+    ```bash
+    echo $GROQ_API_KEY
+    ```
+    Export it in your shell profile for persistence
+  </Accordion>
+  
+  <Accordion title="RAG Index Not Found">
+    Create index first:
+    ```bash
+    refactron rag index
+    ```
+  </Accordion>
+  
+  <Accordion title="Slow AI Responses">
+    - Use smaller models (llama3-8b-8192)
+    - Reduce `max_tokens`
+    - Limit context retrieval chunks
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Pattern Learning"
+    icon="brain"
+    href="/guides/pattern-learning"
+  >
+    Learn how feedback improves suggestions
+  </Card>
+  <Card
+    title="CLI Reference"
+    icon="terminal"
+    href="/cli/commands"
+  >
+    Explore all AI-related commands
+  </Card>
+</CardGroup>

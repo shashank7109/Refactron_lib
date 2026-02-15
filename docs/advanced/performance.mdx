@@ -1,0 +1,178 @@
+---
+title: Performance Optimization
+description: 'Optimize Refactron for large codebases'
+---
+
+## Overview
+
+Refactron includes several performance optimization features designed to handle large codebases efficiently:
+
+- **AST Caching** - Avoid re-parsing unchanged files
+- **Incremental Analysis** - Only analyze changed files
+- **Parallel Processing** - Analyze multiple files concurrently
+
+## Quick Start
+
+Enable all optimizations in `.refactron.yaml`:
+
+```yaml .refactron.yaml
+# Performance optimizations
+enable_ast_cache: true
+max_ast_cache_size_mb: 100
+
+enable_incremental_analysis: true
+
+enable_parallel_processing: true
+max_parallel_workers: 4
+```
+
+## AST Caching
+
+Cache parsed Abstract Syntax Trees to avoid re-parsing.
+
+<AccordionGroup>
+  <Accordion title="Benefits">
+    - 5-10x faster on repeated analysis
+    - Reduces CPU usage
+    - Especially effective for large files
+  </Accordion>
+  
+  <Accordion title="Configuration">
+    ```python
+    from refactron import Refactron
+    from refactron.core.config import RefactronConfig
+    
+    config = RefactronConfig(
+        enable_ast_cache=True,
+        max_ast_cache_size_mb=100
+    )
+    refactron = Refactron(config)
+    ```
+  </Accordion>
+  
+  <Accordion title="Cache Statistics">
+    ```python
+    stats = refactron.get_performance_stats()
+    print(f"Hit rate: {stats['ast_cache']['hit_rate']}%")
+    print(f"Cache size: {stats['ast_cache']['cache_size_mb']} MB")
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Incremental Analysis
+
+Only analyze files that changed since the last run.
+
+**Benefits:**
+- Up to 90% reduction in analysis time
+- Ideal for CI/CD pipelines
+- Perfect for iterative development
+
+**Example:**
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+
+# First run - analyzes all files
+result1 = refactron.analyze("project/")
+print(f"Analyzed {result1.summary['files_analyzed']} files")
+
+# Second run (no changes) - skips unchanged files
+result2 = refactron.analyze("project/")
+print(f"Analyzed {result2.summary['files_analyzed']} files")  # Much less!
+```
+
+## Parallel Processing
+
+Analyze multiple files concurrently using multiprocessing.
+
+**Configuration:**
+```yaml .refactron.yaml
+enable_parallel_processing: true
+max_parallel_workers: 4  # Number of parallel workers
+```
+
+**When to Use:**
+- ✅ Large codebases (1000+ files)
+- ✅ Multi-core systems
+- ❌ Small codebases (&lt;10 files)
+
+## Best Practices by Project Size
+
+### Small Projects (&lt;1000 files)
+
+```yaml
+enable_ast_cache: true
+enable_incremental_analysis: true
+enable_parallel_processing: false  # Overhead not worth it
+```
+
+### Medium Projects (1000-10000 files)
+
+```yaml
+enable_ast_cache: true
+enable_incremental_analysis: true
+enable_parallel_processing: true
+max_parallel_workers: 4
+```
+
+### Large Projects (10000+ files)
+
+```yaml
+enable_ast_cache: true
+max_ast_cache_size_mb: 200  # Larger cache
+enable_incremental_analysis: true
+enable_parallel_processing: true
+max_parallel_workers: 8  # More workers
+```
+
+## Performance Statistics
+
+Get detailed performance stats:
+
+```python
+stats = refactron.get_performance_stats()
+
+# AST Cache
+print(f"Cache hits: {stats['ast_cache']['hits']}")
+print(f"Hit rate: {stats['ast_cache']['hit_rate']}%")
+
+# Parallel Processing
+print(f"Workers: {stats['parallel']['max_workers']}")
+
+# Clear caches when needed
+refactron.clear_caches()
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Performance Not Improving">
+    Check if optimizations are enabled:
+    ```python
+    stats = refactron.get_performance_stats()
+    print(f"Cache enabled: {stats['ast_cache']['enabled']}")
+    print(f"Hit rate: {stats['ast_cache']['hit_rate']}%")
+    ```
+  </Accordion>
+  
+  <Accordion title="High Memory Usage">
+    - Reduce cache size: `max_ast_cache_size_mb: 50`
+    - Lower parallel workers: `max_parallel_workers: 2`
+    - Clear caches periodically: `refactron.clear_caches()`
+  </Accordion>
+  
+  <Accordion title="Parallel Processing Slower">
+    Disable for small codebases:
+    ```yaml
+    enable_parallel_processing: false
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Card title="Monitoring Guide" icon="chart-line" href="/advanced/monitoring">
+  Learn how to monitor Refactron in production
+</Card>

@@ -1,0 +1,345 @@
+---
+title: Refactron Class
+description: 'Main API class reference'
+---
+
+## Overview
+
+The `Refactron` class is the main entry point for all code analysis and refactoring operations.
+
+## Constructor
+
+```python
+from refactron import Refactron
+from refactron.core.config import RefactronConfig
+
+# Default configuration
+refactron = Refactron()
+
+# Custom configuration
+config = RefactronConfig(
+    max_function_complexity=15,
+    enabled_analyzers=["security", "complexity"]
+)
+refactron = Refactron(config)
+```
+
+<ParamField path="config" type="RefactronConfig" default="None">
+  Configuration object. If None, uses default configuration.
+</ParamField>
+
+## Methods
+
+### analyze()
+
+Analyze a file or directory for issues.
+
+```python
+def analyze(target: Union[str, Path]) -> AnalysisResult
+```
+
+<ParamField path="target" type="str | Path" required>
+  Path to file or directory to analyze
+</ParamField>
+
+**Returns:** `AnalysisResult` containing detected issues and metrics
+
+**Example:**
+```python
+refactron = Refactron()
+result = refactron.analyze("myproject/")
+
+print(f"Files analyzed: {result.summary['files_analyzed']}")
+print(f"Total issues: {result.summary['total_issues']}")
+
+for issue in result.issues:
+    print(f"{issue.level.value}: {issue.message}")
+```
+
+---
+
+### refactor()
+
+Refactor a file or directory with intelligent transformations.
+
+```python
+def refactor(
+    target: Union[str, Path],
+    preview: bool = True,
+    operation_types: Optional[List[str]] = None
+) -> RefactorResult
+```
+
+<ParamField path="target" type="str | Path" required>
+  Path to file or directory to refactor
+</ParamField>
+
+<ParamField path="preview" type="bool" default="True">
+  If True, show changes without applying them
+</ParamField>
+
+<ParamField path="operation_types" type="List[str]" default="None">
+  Specific refactoring types to apply. None = all types.
+  
+  Available types:
+  - `extract_constant`
+  - `add_docstring`
+  - `simplify_conditionals`
+  - `reduce_parameters`
+</ParamField>
+
+**Returns:** `RefactorResult` containing operations and status
+
+**Example:**
+```python
+# Preview all refactorings
+result = refactron.refactor("myfile.py", preview=True)
+result.show_diff()
+
+# Apply specific refactorings
+result = refactron.refactor(
+    "myfile.py",
+    preview=False,
+    operation_types=["extract_constant", "add_docstring"]
+)
+
+if result.success:
+    print(f"Applied {len(result.operations)} refactorings")
+    print(f"Backup: {result.backup_path}")
+```
+
+---
+
+### record_feedback()
+
+Record developer feedback on a refactoring suggestion.
+
+```python
+def record_feedback(
+    operation_id: str,
+    action: str,
+    reason: Optional[str] = None,
+    operation: Optional[RefactoringOperation] = None
+) -> None
+```
+
+<ParamField path="operation_id" type="str" required>
+  Unique identifier for the refactoring operation
+</ParamField>
+
+<ParamField path="action" type="str" required>
+  Feedback action: `"accepted"`, `"rejected"`, or `"ignored"`
+</ParamField>
+
+<ParamField path="reason" type="str" default="None">
+  Optional reason for the feedback
+</ParamField>
+
+<ParamField path="operation" type="RefactoringOperation" default="None">
+  The refactoring operation object (for pattern learning)
+</ParamField>
+
+**Example:**
+```python
+result = refactron.refactor("myfile.py", preview=True)
+
+for op in result.operations:
+    refactron.record_feedback(
+        operation_id=op.operation_id,
+        action="accepted",
+        reason="Improved readability",
+        operation=op
+    )
+```
+
+---
+
+### get_python_files()
+
+Get all Python files in a directory, respecting exclude patterns.
+
+```python
+def get_python_files(directory: Path) -> List[Path]
+```
+
+<ParamField path="directory" type="Path" required>
+  Directory to search for Python files
+</ParamField>
+
+**Returns:** List of Python file paths
+
+**Example:**
+```python
+from pathlib import Path
+
+refactron = Refactron()
+files = refactron.get_python_files(Path("myproject"))
+
+print(f"Found {len(files)} Python files")
+for file in files:
+    print(file)
+```
+
+---
+
+### get_performance_stats()
+
+Get performance statistics from optimization components.
+
+```python
+def get_performance_stats() -> Dict[str, Any]
+```
+
+**Returns:** Dictionary containing performance statistics
+
+**Example:**
+```python
+stats = refactron.get_performance_stats()
+
+print(f"AST cache hits: {stats['ast_cache']['hits']}")
+print(f"AST cache misses: {stats['ast_cache']['misses']}")
+print(f"Parallel jobs: {stats['parallel']['max_workers']}")
+```
+
+---
+
+### clear_caches()
+
+Clear all performance-related caches.
+
+```python
+def clear_caches() -> None
+```
+
+**Example:**
+```python
+# Clear caches after major code changes
+refactron.clear_caches()
+```
+
+---
+
+### detect_project_root ()
+
+Detect project root by looking for common markers.
+
+```python
+def detect_project_root(file_path: Path) -> Path
+```
+
+<ParamField path="file_path" type="Path" required>
+  File path to start searching from
+</ParamField>
+
+**Returns:** Path to project root
+
+**Example:**
+```python
+from pathlib import Path
+
+refactron = Refactron()
+root = refactron.detect_project_root(Path("src/module/file.py"))
+print(f"Project root: {root}")
+```
+
+## Properties
+
+### config
+
+Access current configuration.
+
+```python
+config = refactron.config
+print(f"Max complexity: {config.max_function_complexity}")
+```
+
+### analyzers
+
+List of enabled analyzers.
+
+```python
+analyzers = refactron.analyzers
+print(f"Enabled analyzers: {[a.__class__.__name__ for a in analyzers]}")
+```
+
+### refactorers
+
+List of enabled refactorers.
+
+```python
+refactorers = refactron.refactorers
+print(f"Enabled refactorers: {[r.__class__.__name__ for r in refactorers]}")
+```
+
+## Complete Example
+
+```python
+from refactron import Refactron
+from refactron.core.config import RefactronConfig
+from pathlib import Path
+
+# Configure Refactron
+config = RefactronConfig(
+    max_function_complexity=15,
+    max_function_length=100,
+    enabled_analyzers=["security", "complexity", "code_smell"],
+    enabled_refactorers=["extract_constant", "add_docstring"],
+    enable_pattern_learning=True
+)
+
+# Initialize
+refactron = Refactron(config)
+
+# Analyze project
+print("Analyzing project...")
+analysis = refactron.analyze("myproject/")
+
+# Print summary
+print(f"\nAnalysis Summary:")
+print(f"  Files analyzed: {analysis.summary['files_analyzed']}")
+print(f"  Total issues: {analysis.summary['total_issues']}")
+
+# Print critical issues
+critical = [i for i in analysis.issues if i.level.value == "CRITICAL"]
+if critical:
+    print(f"\nCritical Issues ({len(critical)}):")
+    for issue in critical:
+        print(f"  {issue.file_path}:{issue.line_number} - {issue.message}")
+
+# Refactor with preview
+print("\nGenerating refactoring suggestions...")
+result = refactron.refactor("myproject/", preview=True)
+
+# Review and apply specific operations
+for op in result.operations:
+    print(f"\nOperation: {op.operation_type}")
+    print(f"  File: {op.file_path}:{op.line_number}")
+    print(f"  Risk: {op.risk_score}")
+    print(f"  Description: {op.description}")
+    
+    # Record feedback
+    refactron.record_feedback(
+        operation_id=op.operation_id,
+        action="accepted",
+        reason="Approved after review",
+        operation=op
+    )
+
+# Get performance stats
+stats = refactron.get_performance_stats()
+print(f"\nPerformance:")
+print(f"  AST cache hit rate: {stats['ast_cache']['hit_rate']:.1%}")
+
+print("\nRefactoring complete!")
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Code Analysis Guide" icon="magnifying-glass" href="/guides/code-analysis">
+    Learn about analysis features
+  </Card>
+  <Card title="Refactoring Guide" icon="wrench" href="/guides/refactoring">
+    Master refactoring workflows
+  </Card>
+</CardGroup>

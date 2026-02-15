@@ -1,0 +1,271 @@
+---
+title: API Overview
+description: 'Python API reference for Refactron'
+---
+
+## Introduction
+
+Refactron provides a comprehensive Python API for programmatic code analysis and refactoring. This is ideal for integrating Refactron into your own tools, scripts, or CI/CD pipelines.
+
+## Quick Start
+
+```python
+from refactron import Refactron
+
+# Initialize Refactron
+refactron = Refactron()
+
+# Analyze code
+analysis = refactron.analyze("myproject/")
+print(f"Found {analysis.summary['total_issues']} issues")
+
+# Refactor code
+result = refactron.refactor("myfile.py", preview=True)
+result.show_diff()
+```
+
+## Core Classes
+
+<CardGroup cols={2}>
+  <Card title="Refactron" icon="code" href="/api-reference/refactron-class">
+    Main entry point for all operations
+  </Card>
+  <Card title="RefactronConfig" icon="gear">
+    Configuration management
+  </Card>
+  <Card title="AnalysisResult" icon="chart-bar">
+    Analysis results and metrics
+  </Card>
+  <Card title="RefactorResult" icon="wrench">
+    Refactoring results and diffs
+  </Card>
+</CardGroup>
+
+## Installation for Python API
+
+```bash
+pip install refactron
+```
+
+## Basic Patterns
+
+### Analysis
+
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+
+# Analyze file or directory
+analysis = refactron.analyze("path/to/code")
+
+# Access summary
+print(f"Files: {analysis.summary['files_analyzed']}")
+print(f"Issues: {analysis.summary['total_issues']}")
+
+# Iterate through issues
+for issue in analysis.issues:
+    print(f"{issue.level.value}: {issue.message} at {issue.file_path}:{issue.line_number}")
+```
+
+### Filtering Issues
+
+```python
+# Filter by severity
+critical_issues = [i for i in analysis.issues if i.level.value == "CRITICAL"]
+errors = [i for i in analysis.issues if i.level.value == "ERROR"]
+
+# Filter by category
+security_issues = [i for i in analysis.issues if i.category == "SECURITY"]
+complexity_issues = [i for i in analysis.issues if i.category == "COMPLEXITY"]
+```
+
+### Refactoring
+
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+
+# Preview refactoring
+result = refactron.refactor("myfile.py", preview=True)
+
+# Show diff for each operation
+for op in result.operations:
+    print(f"Operation: {op.operation_type}")
+    print(f"Risk: {op.risk_score}")
+    print(f"Diff:\n{op.diff}")
+
+# Apply specific refactorings
+result = refactron.refactor(
+    "myfile.py",
+    preview=False,
+    operation_types=["extract_constant", "add_docstring"]
+)
+
+if result.success:
+    print(f"Backup: {result.backup_path}")
+```
+
+### Configuration
+
+```python
+from refactron import Refactron
+from refactron.core.config import RefactronConfig
+
+# Custom configuration
+config = RefactronConfig(
+    max_function_complexity=15,
+    max_function_length=100,
+    enabled_analyzers=["security", "complexity"],
+    enabled_refactorers=["extract_constant"],
+    enable_pattern_learning=True
+)
+
+refactron = Refactron(config)
+```
+
+### Feedback and Pattern Learning
+
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+result = refactron.refactor("myfile.py", preview=True)
+
+# Record feedback
+for op in result.operations:
+    refactron.record_feedback(
+        operation_id=op.operation_id,
+        action="accepted",  # or "rejected", "ignored"
+        reason="Improved code quality",
+        operation=op
+    )
+```
+
+## Configuration Options
+
+<ParamField path="max_function_complexity" type="int" default="10">
+  Maximum cyclomatic complexity for functions
+</ParamField>
+
+<ParamField path="max_function_length" type="int" default="50">
+  Maximum lines per function
+</ParamField>
+
+<ParamField path="max_parameters" type="int" default="5">
+  Maximum parameters per function
+</ParamField>
+
+<ParamField path="max_nesting_depth" type="int" default="3">
+  Maximum nesting depth for control structures
+</ParamField>
+
+<ParamField path="enabled_analyzers" type="list" default="all">
+  List of analyzers to enable: `security`, `complexity`, `code_smell`, `type_hint`, `dead_code`, `dependency`
+</ParamField>
+
+<ParamField path="enabled_refactorers" type="list" default="all">
+  List of refactorers to enable: `extract_constant`, `add_docstring`, `simplify_conditionals`, `reduce_parameters`
+</ParamField>
+
+<ParamField path="enable_pattern_learning" type="bool" default="true">
+  Enable pattern learning system
+</ParamField>
+
+## Models and Data Structures
+
+### Issue
+
+```python
+class Issue:
+    file_path: str          # Path to file with issue
+    line_number: int        # Line number
+    message: str            # Issue description
+    level: IssueLevel       # CRITICAL, ERROR, WARNING, INFO
+    category: str           # SECURITY, COMPLEXITY, etc.
+    suggestion: Optional[str]  # Fix suggestion
+```
+
+### RefactoringOperation
+
+```python
+class RefactoringOperation:
+    operation_id: str       # Unique identifier
+    operation_type: str     # Type of refactoring
+    file_path: str          # Target file
+    line_number: int        # Target line
+    risk_score: float       # 0.0 to 1.0
+    diff: str              # Unified diff
+    description: str        # Human-readable description
+```
+
+### AnalysisResult
+
+```python
+class AnalysisResult:
+    summary: dict          # Summary statistics
+    issues: List[Issue]    # All detected issues
+    metrics: FileMetrics   # Code metrics
+    errors: List[str]      # Any errors encountered
+```
+
+## Error Handling
+
+```python
+from refactron import Refactron
+from refactron.core.exceptions import RefactronError, AnalysisError
+
+refactron = Refactron()
+
+try:
+    analysis = refactron.analyze("myproject/")
+except AnalysisError as e:
+    print(f"Analysis failed: {e}")
+except RefactronError as e:
+    print(f"Refactron error: {e}")
+```
+
+## Advanced Usage
+
+### Custom Analyzers
+
+```python
+from refactron.analyzers.base_analyzer import BaseAnalyzer
+
+class MyCustomAnalyzer(BaseAnalyzer):
+    def analyze_file(self, file_path, ast_tree):
+        # Custom analysis logic
+        issues = []
+        # ... analyze and create issues
+        return issues
+
+# Use with Refactron
+refactron = Refactron()
+refactron.analyzers.append(MyCustomAnalyzer())
+```
+
+### Performance Optimization
+
+```python
+from refactron import Refactron
+
+refactron = Refactron()
+
+# Get performance stats
+stats = refactron.get_performance_stats()
+print(f"AST cache hits: {stats['ast_cache']['hits']}")
+
+# Clear caches
+refactron.clear_caches()
+```
+
+## Next Steps
+
+<Card
+  title="Refactron Class Reference"
+  icon="book"
+  href="/api-reference/refactron-class"
+>
+  Detailed API documentation for the Refactron class
+</Card>

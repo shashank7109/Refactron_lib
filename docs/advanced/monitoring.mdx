@@ -1,0 +1,208 @@
+---
+title: Monitoring
+description: 'Production monitoring and telemetry'
+---
+
+## Overview
+
+Refactron includes comprehensive logging and monitoring capabilities for production environments:
+
+- **Structured Logging** - JSON-formatted logs for CI/CD
+- **Metrics Collection** - Track analysis time and success rates  
+- **Prometheus Integration** - Expose metrics via HTTP endpoint
+- **Opt-in Telemetry** - Anonymous usage analytics
+
+## Structured Logging
+
+### Configuration
+
+```yaml .refactron.yaml
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_format: json  # json or text
+enable_console_logging: true
+enable_file_logging: true
+```
+
+### JSON Log Output
+
+```json
+{
+  "timestamp": "2026-02-15T10:30:42Z",
+  "level": "INFO",
+  "logger": "refactron.core.refactron",
+  "message": "Analysis completed successfully",
+  "duration_ms": 123.45
+}
+```
+
+### CLI Usage
+
+```bash
+# JSON logging for CI/CD
+refactron analyze mycode.py --log-format json
+
+# Set log level
+refactron analyze mycode.py --log-level DEBUG
+```
+
+## Metrics Collection
+
+Track detailed metrics about Refactron operations.
+
+### View Metrics
+
+```bash
+# Text format
+refactron metrics
+
+# JSON format
+refactron metrics --format json
+```
+
+### Example Output
+
+```
+📈 Refactron Metrics
+
+Analysis Metrics:
+  Files analyzed: 45
+  Issues found: 123
+  Total time: 5234ms
+  Success rate: 95.6%
+
+Analyzer Hit Counts:
+  complexity: 23
+  security: 15
+  type_hints: 45
+```
+
+### Python API
+
+```python
+stats = refactron.get_performance_stats()
+print(f"Files analyzed: {stats['files_analyzed']}")
+print(f"Issues found: {stats['issues_found']}")
+```
+
+## Prometheus Integration
+
+Expose metrics via HTTP endpoint for Prometheus scraping.
+
+### Start Metrics Server
+
+```bash
+# Default port 9090
+refactron serve-metrics
+
+# Custom port
+refactron serve-metrics --port 8080
+```
+
+### Available Metrics
+
+**Counters:**
+- `refactron_files_analyzed_total`
+- `refactron_issues_found_total`
+- `refactron_analyzer_hits_total{analyzer="name"}`
+
+**Gauges:**
+- `refactron_analysis_duration_ms`
+- `refactron_analysis_success_rate`
+
+### Prometheus Configuration
+
+Add to your `prometheus.yml`:
+
+```yaml
+scrape_configs:
+  - job_name: 'refactron'
+    static_configs:
+      - targets: ['localhost:9090']
+```
+
+## Telemetry
+
+<Warning>
+  Telemetry is **opt-in only** and disabled by default. It collects anonymous usage statistics to help improve Refactron.
+</Warning>
+
+### What is Collected
+
+**Collected:**
+- Number of files analyzed
+- Analysis execution time
+- Python version and OS platform
+
+**NOT Collected:**
+- Your code or file names
+- Personal information
+- Error messages or stack traces
+
+### Manage Telemetry
+
+```bash
+# Check status
+refactron telemetry --status
+
+# Enable telemetry
+refactron telemetry --enable
+
+# Disable telemetry
+refactron telemetry --disable
+```
+
+## Environment-Specific Configurations
+
+### Development
+
+```yaml
+log_level: DEBUG
+log_format: text
+enable_metrics: true
+enable_prometheus: false
+```
+
+### CI/CD
+
+```yaml
+log_level: INFO
+log_format: json
+enable_metrics: true
+enable_prometheus: false
+```
+
+### Production
+
+```yaml
+log_level: WARNING
+log_format: json
+enable_metrics: true
+enable_prometheus: true
+prometheus_port: 9090
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Use JSON Logging in CI/CD">
+    JSON format integrates easily with log aggregation systems
+  </Step>
+  
+  <Step title="Enable Metrics in Production">
+    Track performance and identify bottlenecks
+  </Step>
+  
+  <Step title="Set Up Prometheus Dashboards">
+    Visualize Refactron metrics over time
+  </Step>
+  
+  <Step title="Keep Telemetry Optional">
+    Respect user privacy with opt-in telemetry
+  </Step>
+</Steps>
+
+## Next Steps
+
+<Card title="CI/CD Integration" icon="code-branch" href="/advanced/ci-cd">
+  Learn how to integrate Refactron into your CI/CD pipeline
+</Card>

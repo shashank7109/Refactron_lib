@@ -1,0 +1,217 @@
+---
+title: Quick Start
+description: 'Get started with Refactron in minutes'
+---
+
+## Installation
+
+Install Refactron using pip:
+
+```bash
+pip install refactron
+```
+
+<Note>
+  Refactron requires Python 3.8 or higher
+</Note>
+
+## Complete Workflow
+
+Follow this workflow to get the most out of Refactron:
+
+<Steps>
+  <Step title="Login">
+    Authenticate with Refactron to unlock AI features:
+    ```bash
+    refactron login
+    ```
+  </Step>
+  
+  <Step title="Initialize Configuration">
+    Set up Refactron in your project:
+    ```bash
+    refactron init
+    ```
+    Choose a template (base, django, fastapi, or flask) to get started quickly.
+  </Step>
+  
+  <Step title="Connect Repository (Optional)">
+    Connect your GitHub repository for enhanced features:
+    ```bash
+    refactron repo connect
+    ```
+  </Step>
+  
+  <Step title="Analyze Your Code">
+    Run comprehensive code analysis:
+    ```bash
+    refactron analyze . --detailed
+    ```
+  </Step>
+  
+  <Step title="Get AI Suggestions">
+    Generate AI-powered refactoring suggestions:
+    ```bash
+    refactron suggest myfile.py
+    ```
+  </Step>
+  
+  <Step title="Apply Refactoring">
+    Preview and apply refactoring changes:
+    ```bash
+    # Preview changes first
+    refactron refactor myfile.py --preview
+    
+    # Apply when ready
+    refactron refactor myfile.py --apply
+    ```
+  </Step>
+  
+  <Step title="Generate Report">
+    Create a comprehensive technical debt report:
+    ```bash
+    refactron report . --format html -o report.html
+    ```
+  </Step>
+  
+  <Step title="Rollback if Needed">
+    Rollback changes if something goes wrong:
+    ```bash
+    refactron rollback
+    ```
+  </Step>
+</Steps>
+
+## Quick Commands
+
+### Analyze Code
+
+```bash
+# Analyze a file
+refactron analyze mycode.py
+
+# Analyze a directory
+refactron analyze myproject/
+
+# Get detailed analysis
+refactron analyze . --detailed
+```
+
+### Refactor Code
+
+```bash
+# Preview refactoring suggestions
+refactron refactor myfile.py --preview
+
+# Apply automated fixes
+refactron autofix myfile.py --apply
+
+# Apply specific refactoring
+refactron refactor myfile.py --apply
+```
+
+### AI-Powered Features
+
+```bash
+# Get AI suggestions
+refactron suggest myfile.py --query "How can I improve this?"
+
+# Generate documentation
+refactron document myfile.py
+
+# Use RAG for context-aware suggestions
+refactron rag query "How to optimize database queries?"
+```
+
+## Python API
+
+Use Refactron programmatically in your Python code:
+
+```python
+from refactron import Refactron
+
+# Initialize Refactron
+refactron = Refactron()
+
+# Analyze code
+analysis = refactron.analyze("path/to/code.py")
+print(analysis.report())
+
+# Preview refactoring
+result = refactron.refactor("path/to/code.py", preview=True)
+result.show_diff()
+
+# Apply refactoring
+result = refactron.refactor("path/to/code.py", preview=False)
+```
+
+## Example Output
+
+When you run an analysis, you'll see:
+
+<CodeGroup>
+
+```bash Terminal Output
+✓ Analyzing myproject/
+  Files analyzed: 25
+  Issues found: 12
+  
+  CRITICAL (2):
+  - SQL injection vulnerability (line 45)
+  - Hardcoded secret detected (line 78)
+  
+  ERROR (4):
+  - High cyclomatic complexity (line 120)
+  - Deep nesting detected (line 156)
+  
+  WARNING (6):
+  - Magic number usage (line 23)
+  - Missing type hints (line 67)
+```
+
+```python Python API
+{
+  "files_analyzed": 25,
+  "total_issues": 12,
+  "by_severity": {
+    "CRITICAL": 2,
+    "ERROR": 4,
+    "WARNING": 6
+  }
+}
+```
+
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Configuration"
+    icon="gear"
+    href="/essentials/configuration"
+  >
+    Customize analyzers and thresholds
+  </Card>
+  <Card
+    title="Code Analysis Guide"
+    icon="magnifying-glass"
+    href="/guides/code-analysis"
+  >
+    Learn about analysis features
+  </Card>
+  <Card
+    title="Refactoring Guide"
+    icon="wrench"
+    href="/guides/refactoring"
+  >
+    Master refactoring workflows
+  </Card>
+  <Card
+    title="AI Features"
+    icon="sparkles"
+    href="/guides/ai-features"
+  >
+    Explore AI-powered capabilities
+  </Card>
+</CardGroup>

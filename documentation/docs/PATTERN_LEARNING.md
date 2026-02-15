@@ -12,6 +12,7 @@ Refactron's Pattern Learning System learns from your feedback on refactoring sug
 
 - **Automatic Learning** - Learns from every refactoring decision you make
 - **Smart Ranking** - Ranks suggestions by historical acceptance rates
+- **AI-Powered Insights** - Integrates with LLMs (v1.0.15+) to provide context-aware pattern recognition and suggestions.
 - **Project-Specific** - Adapts to your project's coding style and preferences
 - **Persistent Storage** - Patterns persist across sessions
 - **Configurable** - Enable/disable features as needed

@@ -15,7 +15,8 @@ pip install refactron
 3. [Previewing Refactorings](#previewing-refactorings)
 4. [Applying Changes](#applying-changes)
 5. [Configuration](#configuration)
-6. [Advanced Usage](#advanced-usage)
+6. [AI-Powered Features (v1.0.15)](#ai-powered-features)
+7. [Advanced Usage](#advanced-usage)
 
 ---
 
@@ -218,6 +219,30 @@ config = RefactronConfig(
 
 refactron = Refactron(config)
 analysis = refactron.analyze("example.py")
+```
+
+---
+
+## AI-Powered Features (v1.0.15)
+
+Version v1.0.15 introduces semantic intelligence using LLMs and RAG.
+
+### Initializing the RAG Index
+To give the AI context about your project, you must first index it:
+```bash
+refactron rag index
+```
+
+### AI Refactoring Suggestions
+Use the `suggest` command for smarter, multi-line refactorings:
+```bash
+refactron suggest example.py --line 5
+```
+
+### Automated Documentation
+Generate comprehensive docstrings for your file:
+```bash
+refactron document example.py --apply
 ```
 
 ---
