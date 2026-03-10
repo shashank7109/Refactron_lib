@@ -41,15 +41,13 @@ class TestFullWorkflowIntegration:
 
         # Create a test file
         test_file = temp_storage_dir / "test_code.py"
-        test_file.write_text(
-            """
+        test_file.write_text("""
 def calculate_total(items):
     total = 0
     for item in items:
         total += item.price * item.quantity
     return total
-""".strip()
-        )
+""".strip())
 
         # Step 1: Refactor (should fingerprint and rank)
         result = refactron.refactor(test_file, preview=True)
@@ -137,15 +135,13 @@ def calculate_total(items):
 
         # Use code that will generate refactoring operations
         test_file = temp_storage_dir / "test.py"
-        test_file.write_text(
-            """
+        test_file.write_text("""
 def calculate_total(items):
     total = 0
     for item in items:
         total += item.price * 100  # Magic number
     return total
-""".strip()
-        )
+""".strip())
 
         # Refactor multiple times and record feedback
         operations_seen = []
@@ -188,24 +184,20 @@ class TestMultiProjectPatternIsolation:
         project1_dir = temp_storage_dir / "project1"
         project1_dir.mkdir()
         project1_file = project1_dir / "code.py"
-        project1_file.write_text(
-            """
+        project1_file.write_text("""
 def func1():
     x = 100  # Magic number
     return x * 2
-""".strip()
-        )
+""".strip())
 
         project2_dir = temp_storage_dir / "project2"
         project2_dir.mkdir()
         project2_file = project2_dir / "code.py"
-        project2_file.write_text(
-            """
+        project2_file.write_text("""
 def func2():
     y = 200  # Different magic number
     return y * 3
-""".strip()
-        )
+""".strip())
 
         # Create separate storage for each project
         storage1_dir = temp_storage_dir / "storage1"
@@ -277,12 +269,10 @@ class TestPatternDatabasePersistence:
     def test_patterns_persist_across_sessions(self, temp_storage_dir):
         """Test that patterns persist when Refactron is recreated."""
         test_file = temp_storage_dir / "test.py"
-        test_file.write_text(
-            """
+        test_file.write_text("""
 def calculate(x):
     return x * 100  # Magic number
-""".strip()
-        )
+""".strip())
 
         # First session: refactor and record feedback
         config = RefactronConfig(
@@ -393,16 +383,14 @@ class TestEndToEndPatternLearning:
         refactron = refactron_with_storage
 
         test_file = temp_storage_dir / "test.py"
-        test_file.write_text(
-            """
+        test_file.write_text("""
 def process_data(data):
     result = []
     for item in data:
         if item > 0:
             result.append(item * 2)
     return result
-""".strip()
-        )
+""".strip())
 
         # Initial refactor - no patterns learned yet
         result1 = refactron.refactor(test_file, preview=True)
@@ -444,16 +432,14 @@ def process_data(data):
         from refactron.patterns.learning_service import LearningService
 
         test_file = temp_storage_dir / "test.py"
-        test_file.write_text(
-            """
+        test_file.write_text("""
 def process_data(data):
     result = []
     for item in data:
         if item > 0:
             result.append(item * 100)  # Magic number
     return result
-""".strip()
-        )
+""".strip())
 
         # Create and learn a pattern
         result = refactron.refactor(test_file, preview=True)

@@ -322,13 +322,11 @@ class TestPerformanceIntegration:
         """Test analysis with caching components initialized."""
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = Path(tmpdir) / "test.py"
-            test_file.write_text(
-                """
+            test_file.write_text("""
 def simple_function():
     '''A simple function.'''
     return 42
-"""
-            )
+""")
 
             config = RefactronConfig(
                 enable_ast_cache=True,

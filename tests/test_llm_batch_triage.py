@@ -115,9 +115,7 @@ def test_evaluate_issues_batch_fallback_on_error(mock_llm_client, mock_retriever
 def test_evaluate_issues_batch_fallback_on_bad_json(mock_llm_client, mock_retriever):
     """Test batch evaluation handles invalid JSON appropriately."""
     mock_llm_client.generate.return_value = "not a json string at all"
-    orchestrator = LLMOrchestrator(
-        retriever=mock_retriever, llm_client=mock_llm_client
-    )
+    orchestrator = LLMOrchestrator(retriever=mock_retriever, llm_client=mock_llm_client)
 
     issues = [
         CodeIssue(

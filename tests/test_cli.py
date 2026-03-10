@@ -62,13 +62,11 @@ class TestAnalyzeCommand:
         runner = CliRunner()
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write(
-                """
+            f.write("""
 def test_function(a, b, c, d, e, f):
     '''Function with too many parameters.'''
     return a + b + c + d + e + f
-"""
-            )
+""")
             temp_path = f.name
 
         try:
@@ -129,16 +127,14 @@ def test_function(a, b, c, d, e, f):
         runner = CliRunner()
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write(
-                """
+            f.write("""
 def bad_function(a, b, c, d, e, f, g):
     if True:
         if True:
             if True:
                 if True:
                     return eval(a)
-"""
-            )
+""")
             temp_path = f.name
 
         try:
@@ -155,13 +151,11 @@ def bad_function(a, b, c, d, e, f, g):
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create config file
             config_path = Path(tmpdir) / ".refactron.yaml"
-            config_path.write_text(
-                """
+            config_path.write_text("""
 enabled_analyzers:
   - complexity
 max_function_complexity: 5
-"""
-            )
+""")
 
             # Create test file
             test_file = Path(tmpdir) / "test.py"
@@ -186,14 +180,12 @@ class TestRefactorCommand:
         runner = CliRunner()
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write(
-                """
+            f.write("""
 def calculate_discount(price):
     if price > 1000:
         return price * 0.15
     return 0
-"""
-            )
+""")
             temp_path = f.name
 
         try:
@@ -408,14 +400,12 @@ class TestCLIIntegration:
 
                 # 2. Create test file
                 test_file = Path(tmpdir) / "test.py"
-                test_file.write_text(
-                    """
+                test_file.write_text("""
 def calculate(price):
     if price > 1000:
         return price * 0.15
     return 0
-"""
-                )
+""")
 
                 # 3. Analyze
                 result = runner.invoke(analyze, [str(test_file)])
@@ -439,8 +429,7 @@ def calculate(price):
         runner = CliRunner()
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write(
-                """
+            f.write("""
 import os
 import json
 
@@ -452,8 +441,7 @@ def process(data):
 
 def unused():
     pass
-"""
-            )
+""")
             temp_path = f.name
 
         try:

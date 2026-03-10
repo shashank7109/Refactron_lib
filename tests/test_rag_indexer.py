@@ -36,18 +36,15 @@ class TestRAGIndexer:
             workspace_path = Path(tmpdir)
 
             # Create sample Python files
-            (workspace_path / "simple.py").write_text(
-                '''
+            (workspace_path / "simple.py").write_text('''
 """Simple module."""
 
 def hello():
     """Say hello."""
     return "Hello"
-'''
-            )
+''')
 
-            (workspace_path / "utils.py").write_text(
-                '''
+            (workspace_path / "utils.py").write_text('''
 """Utility functions."""
 
 class Calculator:
@@ -56,8 +53,7 @@ class Calculator:
     def add(self, x, y):
         """Add two numbers."""
         return x + y
-'''
-            )
+''')
 
             yield workspace_path
 
