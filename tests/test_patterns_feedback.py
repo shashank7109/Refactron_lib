@@ -170,12 +170,14 @@ class TestRefactronFeedbackIntegration:
             pytest.skip("Pattern fingerprinter not initialized")
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write("""
+            f.write(
+                """
 def calculate(price):
     if price > 1000:
         return price * 0.15
     return 0
-""")
+"""
+            )
             temp_path = Path(f.name)
 
         try:
@@ -199,7 +201,8 @@ def calculate(price):
             pytest.skip("Pattern ranker not initialized")
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write("""
+            f.write(
+                """
 def calculate_price(price):
     if price > 1000:
         return price * 0.15
@@ -211,7 +214,8 @@ def process_order(order_id, customer_name, order_date, total_amount, discount_ra
     else:
         final_price = total_amount
     return final_price
-""")
+"""
+            )
             temp_path = Path(f.name)
 
         try:
@@ -240,12 +244,14 @@ def process_order(order_id, customer_name, order_date, total_amount, discount_ra
         refactron = Refactron(config)
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write("""
+            f.write(
+                """
 def calculate(price):
     if price > 1000:
         return price * 0.15
     return 0
-""")
+"""
+            )
             temp_path = Path(f.name)
 
         try:
@@ -376,12 +382,14 @@ class TestFeedbackCLIIntegration:
         runner = CliRunner()
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write("""
+            f.write(
+                """
 def calculate(price):
     if price > 1000:
         return price * 0.15
     return 0
-""")
+"""
+            )
             temp_path = f.name
 
         try:
