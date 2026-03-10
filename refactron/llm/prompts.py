@@ -92,3 +92,24 @@ Float between 0.0 and 1.0 (e.g. 0.95)
 The complete Markdown documentation content including the mermaid diagram
 @@@END@@@
 """
+
+BATCH_TRIAGE_PROMPT = """
+You are a code triage expert. Evaluate the following list of code issues found in a
+single file and determine the confidence that each is a true positive (requiring
+fixing) rather than a false positive.
+
+File Source Code:
+```python
+{source_code}
+```
+
+Relevant Context (RAG):
+{rag_context}
+
+Issues to evaluate:
+{issues_json}
+
+Return ONLY a JSON map where the keys are the issue IDs and the values are the
+confidence scores (float between 0.0 and 1.0).
+Do NOT return anything except the JSON object.
+"""
