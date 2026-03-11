@@ -275,4 +275,3 @@ Returns:
     List of simplification operations
 
 ## Functions
-

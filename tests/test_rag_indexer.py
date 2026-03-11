@@ -1,9 +1,8 @@
 """Tests for the RAG indexer module."""
 
-import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, create_autospec, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 

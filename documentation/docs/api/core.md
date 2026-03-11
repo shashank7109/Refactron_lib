@@ -2878,4 +2878,3 @@ WorkspaceMapping.to_dict(self) -> 'Dict[str, Any]'
 Convert to dictionary for JSON serialization.
 
 ## Functions
-

@@ -348,4 +348,3 @@ RetrievedContext.__init__(self, content: 'str', file_path: 'str', chunk_type: 's
 Initialize self.  See help(type(self)) for accurate signature.
 
 ## Functions
-

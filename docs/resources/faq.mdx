@@ -9,15 +9,15 @@ description: 'Frequently asked questions'
   <Accordion title="What is Refactron?">
     Refactron is an intelligent Python code refactoring tool that analyzes your code for issues and suggests automated improvements with safety guarantees.
   </Accordion>
-  
+
   <Accordion title="Is Refactron free?">
     Yes! Refactron is open source and free to use. Some advanced features require an API key for authentication.
   </Accordion>
-  
+
   <Accordion title="What Python versions are supported?">
     Refactron supports Python 3.8 and above.
   </Accordion>
-  
+
   <Accordion title="Can I use Refactron in my CI/CD pipeline?">
     Absolutely! Refactron is designed for CI/CD integration. Use `refactron ci` to generate configuration templates.
   </Accordion>
@@ -36,7 +36,7 @@ description: 'Frequently asked questions'
     refactron login
     ```
   </Accordion>
-  
+
   <Accordion title="Do I need to configure anything?">
     Refactron works out of the box with sensible defaults. For customization, run:
     ```bash
@@ -44,7 +44,7 @@ description: 'Frequently asked questions'
     ```
     This creates a `.refactron.yaml` configuration file.
   </Accordion>
-  
+
   <Accordion title="What are the dependencies?">
     Refactron automatically installs all required dependencies via pip. For AI features, you'll need a Groq API key (free tier available).
   </Accordion>
@@ -60,7 +60,7 @@ description: 'Frequently asked questions'
     ```
     This will scan your code and report issues by severity.
   </Accordion>
-  
+
   <Accordion title="Will refactoring break my code?">
     Refactron includes multiple safety features:
     - **Preview mode** - See changes before applying
@@ -68,7 +68,7 @@ description: 'Frequently asked questions'
     - **Automatic backups** - All changes are backed up
     - **Rollback** - Easily undo changes
   </Accordion>
-  
+
   <Accordion title="Can I customize which refactorings are applied?">
     Yes! Use the `--type` flag:
     ```bash
@@ -81,7 +81,7 @@ description: 'Frequently asked questions'
       - add_docstring
     ```
   </Accordion>
-  
+
   <Accordion title="How do I use AI features?">
     First, set your Groq API key:
     ```bash
@@ -104,11 +104,11 @@ description: 'Frequently asked questions'
   <Accordion title="What LLM provider does Refactron use?">
     By default, Refactron uses Groq (Llama 3). You can also configure custom LLM providers.
   </Accordion>
-  
+
   <Accordion title="Is my code sent to external servers?">
     When using AI features with cloud LLM providers (like Groq), code snippets are sent for analysis. The RAG indexing happens locally. You can use local LLM providers for complete privacy.
   </Accordion>
-  
+
   <Accordion title="How often should I re-index for RAG?">
     Re-index after significant code changes:
     ```bash
@@ -127,14 +127,14 @@ description: 'Frequently asked questions'
   <Accordion title="How does pattern learning work?">
     Refactron learns from your feedback on refactoring suggestions. When you accept or reject suggestions, it adapts to your project's style and preferences.
   </Accordion>
-  
+
   <Accordion title="Can I disable pattern learning?">
     Yes, in `.refactron.yaml`:
     ```yaml
     enable_pattern_learning: false
     ```
   </Accordion>
-  
+
   <Accordion title="Where is pattern data stored?">
     By default in `.refactron/patterns/` in your project root. You can customize this:
     ```yaml
@@ -152,7 +152,7 @@ description: 'Frequently asked questions'
     refactron auth status
     ```
   </Accordion>
-  
+
   <Accordion title="Analysis is very slow">
     Enable performance optimizations:
     ```yaml
@@ -161,7 +161,7 @@ description: 'Frequently asked questions'
     max_parallel_workers: 4
     ```
   </Accordion>
-  
+
   <Accordion title="I'm getting false positives">
     You can:
     1. Provide feedback to pattern learning
@@ -175,7 +175,7 @@ description: 'Frequently asked questions'
          - "*/tests/*"
        ```
   </Accordion>
-  
+
   <Accordion title="How do I rollback changes?">
     List available rollback sessions:
     ```bash
@@ -186,7 +186,7 @@ description: 'Frequently asked questions'
     refactron rollback --session <id>
     ```
   </Accordion>
-  
+
   <Accordion title="RAG index not found">
     Create the index first:
     ```bash
@@ -202,14 +202,14 @@ description: 'Frequently asked questions'
     Yes! Extend the `BaseAnalyzer` class:
     ```python
     from refactron.analyzers.base_analyzer import BaseAnalyzer
-    
+
     class MyAnalyzer(BaseAnalyzer):
         def analyze_file(self, file_path, ast_tree):
             # Your analysis logic
             return issues
     ```
   </Accordion>
-  
+
   <Accordion title="Can I use Refactron with other tools?">
     Yes! Refactron integrates well with:
     - **Black** - Code formatting
@@ -218,7 +218,7 @@ description: 'Frequently asked questions'
     - **pre-commit** - Git hooks
     - **Prometheus** - Monitoring
   </Accordion>
-  
+
   <Accordion title="How do I contribute to Refactron?">
     Check out our [GitHub repository](https://github.com/Refactron-ai/Refactron_lib) and see the CONTRIBUTING.md guide!
   </Accordion>

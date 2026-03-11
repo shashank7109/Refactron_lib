@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 try:
     import tree_sitter_python as tspython
@@ -51,11 +51,12 @@ class ParsedFile:
 class CodeParser:
     """AST-aware code parser using tree-sitter."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the parser."""
         if not TREE_SITTER_AVAILABLE:
             raise RuntimeError(
-                "tree-sitter is not available. Install with: pip install tree-sitter tree-sitter-python"
+                "tree-sitter is not available. "
+                "Install with: pip install tree-sitter tree-sitter-python"
             )
 
         # Initialize Python language - handle different tree-sitter API versions
@@ -73,8 +74,37 @@ class CodeParser:
                 try:
                     PY_LANGUAGE = Language(lang, "python")
                 except TypeError:
-                    # Last resort: try as keyword
-                    PY_LANGUAGE = Language(lang, name="python")
+                    # Try using the path to the compiled library (for very old or CI bindings)
+                    try:
+                        import os
+                        import platform
+
+                        pkg_dir = os.path.dirname(tspython.__file__)
+
+                        # Find the correct shared library extension
+                        system = platform.system()
+                        if system == "Windows":
+                            ext = ".dll"
+                        elif system == "Darwin":
+                            ext = ".dylib"
+                        else:
+                            ext = ".so"
+
+                        # Look for common names of the compiled language file
+                        lib_path = None
+                        for fname in os.listdir(pkg_dir):
+                            if fname.endswith(ext):
+                                lib_path = os.path.join(pkg_dir, fname)
+                                break
+
+                        if lib_path:
+                            PY_LANGUAGE = Language(lib_path, "python")
+                        else:
+                            # Last resort: try as keyword or whatever lang is
+                            PY_LANGUAGE = Language(lang, name="python")
+                    except Exception:
+                        # Absolute last resort
+                        PY_LANGUAGE = Language(lang, name="python")
 
         self.parser = Parser(PY_LANGUAGE)
 
@@ -256,7 +286,7 @@ class CodeParser:
 
     def _extract_parameters(self, node: Node, source: bytes) -> List[str]:
         """Extract function parameters."""
-        params = []
+        params: List[str] = []
         params_node = node.child_by_field_name("parameters")
         if not params_node:
             return params

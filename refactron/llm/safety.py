@@ -1,7 +1,7 @@
 """Safety gate for validating LLM-generated code."""
 
 import ast
-from typing import List, Optional
+from typing import List, Set
 
 from refactron.llm.models import RefactoringSuggestion, SafetyCheckResult
 
@@ -90,7 +90,7 @@ class SafetyGate:
         """Check for potentially dangerous imports that are NEW."""
         dangerous_modules = ["subprocess", "os", "shutil", "sys"]
 
-        def get_imports(code):
+        def get_imports(code: str) -> Set[str]:
             imports = set()
             try:
                 tree = ast.parse(code)

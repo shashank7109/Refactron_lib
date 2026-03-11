@@ -80,7 +80,7 @@ def refactor(
 
 <ParamField path="operation_types" type="List[str]" default="None">
   Specific refactoring types to apply. None = all types.
-  
+
   Available types:
   - `extract_constant`
   - `add_docstring`
@@ -316,7 +316,7 @@ for op in result.operations:
     print(f"  File: {op.file_path}:{op.line_number}")
     print(f"  Risk: {op.risk_score}")
     print(f"  Description: {op.description}")
-    
+
     # Record feedback
     refactron.record_feedback(
         operation_id=op.operation_id,

@@ -485,4 +485,3 @@ Returns:
     astroid.nodes.Module
 
 ## Functions
-

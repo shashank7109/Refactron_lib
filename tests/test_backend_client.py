@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-import requests
 
 from refactron.llm.backend_client import BackendLLMClient
 
@@ -56,7 +55,7 @@ def test_backend_client_error_handling(mock_post, mock_credentials):
 
     client = BackendLLMClient()
     with pytest.raises(
-        RuntimeError, match="Backend LLM proxy error \(500\): Internal Server Error"
+        RuntimeError, match=r"Backend LLM proxy error \(500\): Internal Server Error"
     ):
         client.generate(prompt="Refactor this")
 

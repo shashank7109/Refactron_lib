@@ -39,15 +39,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.9'
-      
+
       - name: Install Refactron
         run: pip install refactron
-      
+
       - name: Analyze Code
         run: refactron analyze . --log-format json
 ```
@@ -131,7 +131,7 @@ repos:
     refactron analyze . --log-format json
     ```
   </Accordion>
-  
+
   <Accordion title="Configure Failure Thresholds">
     Fail builds based on severity:
     ```yaml
@@ -142,7 +142,7 @@ repos:
     max_error_issues: 10
     ```
   </Accordion>
-  
+
   <Accordion title="Cache Dependencies">
     Speed up CI runs by caching pip packages:
     ```yaml
@@ -153,7 +153,7 @@ repos:
         key: ${{ runner.os }}-pip-refactron
     ```
   </Accordion>
-  
+
   <Accordion title="Generate Reports">
     Create HTML reports and save as artifacts:
     ```bash

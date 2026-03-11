@@ -287,4 +287,3 @@ Returns:
     Safety check result
 
 ## Functions
-

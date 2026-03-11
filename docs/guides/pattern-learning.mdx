@@ -13,11 +13,11 @@ Refactron's Pattern Learning System learns from your refactoring decisions, buil
   <Step title="Pattern Fingerprinting">
     When Refactron suggests a refactoring, it creates a unique "fingerprint" of the code pattern
   </Step>
-  
+
   <Step title="Feedback Collection">
     You provide feedback: **accepted**, **rejected**, or **ignored**
   </Step>
-  
+
   <Step title="Pattern Learning">
     Refactron tracks:
     - Acceptance rates for each pattern
@@ -25,7 +25,7 @@ Refactron's Pattern Learning System learns from your refactoring decisions, buil
     - Code metrics improvements
     - Project-specific preferences
   </Step>
-  
+
   <Step title="Smart Ranking">
     Future suggestions ranked based on historical acceptance rates and patterns
   </Step>
@@ -237,7 +237,7 @@ pattern_storage_dir: /custom/path/patterns
     - **Reject** inappropriate suggestions
     - **Ignore** if unsure
   </Accordion>
-  
+
   <Accordion title="Use Project-Specific Tuning">
     For large projects, use automated tuning:
     ```bash
@@ -245,14 +245,14 @@ pattern_storage_dir: /custom/path/patterns
     refactron patterns tune --auto
     ```
   </Accordion>
-  
+
   <Accordion title="Review Pattern Statistics">
     Periodically check pattern performance:
     ```bash
     refactron patterns analyze
     ```
   </Accordion>
-  
+
   <Accordion title="Custom Storage for CI/CD">
     In CI/CD environments, use consistent storage:
     ```yaml
@@ -321,14 +321,14 @@ Pattern learning integrates with [AI Features](/guides/ai-features):
     2. Verify storage directory is writable
     3. Check logs: `refactron refactor --log-level DEBUG`
   </Accordion>
-  
+
   <Accordion title="Ranking Not Working">
     **Solutions:**
     1. Check `pattern_ranking_enabled` is `true`
     2. Ensure patterns have been learned (provide feedback first)
     3. Verify sufficient pattern history exists
   </Accordion>
-  
+
   <Accordion title="Storage Issues">
     **Solutions:**
     1. Check directory permissions

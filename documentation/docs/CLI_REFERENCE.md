@@ -16,32 +16,32 @@ This document contains the reference for all Refactron CLI commands.
 COMMAND CENTER
 Select a command by name or number
 
-                                                                                                          
-        ID     COMMAND                        DESCRIPTION                                                 
- ──────────────────────────────────────────────────────────────────────────────────────────────────────── 
-        01     ANALYZE                        Analyze code for issues and technical debt.                 
-        02     AUTH                           Manage authentication state.                                
-        03     AUTOFIX                        Automatically fix code issues (Phase 3...                   
-        04     DOCUMENT                       Generate Google-style docstrings for a...                   
-        05     FEEDBACK                       Provide feedback on a refactoring operation.                
-        06     GENERATE-CICD                  Generate CI/CD integration templates.                       
-        07     INIT                           Initialize Refactron configuration in the...                
-        08     LOGIN                          Log in to Refactron CLI via device-code flow.               
-        09     LOGOUT                         Log out of Refactron CLI.                                   
-        10     METRICS                        Display collected metrics from the current...               
-        11     PATTERNS                       Pattern learning and project-specific...                    
-        12     RAG                            RAG (Retrieval-Augmented Generation)...                     
-        13     REFACTOR                       Refactor code with intelligent...                           
-        14     REPO                           Manage GitHub repository connections.                       
-        15     REPORT                         Generate a detailed technical debt report.                  
-        16     ROLLBACK                       Rollback refactoring changes to restore...                  
-        17     SERVE-METRICS                  Start a Prometheus metrics HTTP server.                     
-        18     SUGGEST                        Generate AI-powered refactoring suggestions.                
-        19     TELEMETRY                      Manage telemetry settings.                                  
-                                                                                                          
+
+        ID     COMMAND                        DESCRIPTION
+ ────────────────────────────────────────────────────────────────────────────────────────────────────────
+        01     ANALYZE                        Analyze code for issues and technical debt.
+        02     AUTH                           Manage authentication state.
+        03     AUTOFIX                        Automatically fix code issues (Phase 3...
+        04     DOCUMENT                       Generate Google-style docstrings for a...
+        05     FEEDBACK                       Provide feedback on a refactoring operation.
+        06     GENERATE-CICD                  Generate CI/CD integration templates.
+        07     INIT                           Initialize Refactron configuration in the...
+        08     LOGIN                          Log in to Refactron CLI via device-code flow.
+        09     LOGOUT                         Log out of Refactron CLI.
+        10     METRICS                        Display collected metrics from the current...
+        11     PATTERNS                       Pattern learning and project-specific...
+        12     RAG                            RAG (Retrieval-Augmented Generation)...
+        13     REFACTOR                       Refactor code with intelligent...
+        14     REPO                           Manage GitHub repository connections.
+        15     REPORT                         Generate a detailed technical debt report.
+        16     ROLLBACK                       Rollback refactoring changes to restore...
+        17     SERVE-METRICS                  Start a Prometheus metrics HTTP server.
+        18     SUGGEST                        Generate AI-powered refactoring suggestions.
+        19     TELEMETRY                      Manage telemetry settings.
+
 
 GLOBAL OPTIONS
---version  Show the version and exit. 
+--version  Show the version and exit.
 --help     Show this message and exit.
 
 USAGE: refactron <command> ...
@@ -452,4 +452,3 @@ Options:
   --help     Show this message and exit.
 
 ```
-

@@ -467,4 +467,3 @@ Returns:
     Dictionary with issue counts
 
 ## Functions
-

@@ -34,67 +34,67 @@ refactron refactor myfile.py
 <AccordionGroup>
   <Accordion title="Extract Constant">
     Replaces magic numbers with named constants
-    
+
     ```python
     # Before
     def calculate_tax(amount):
         return amount * 0.18
-    
+
     # After
     TAX_RATE = 0.18
-    
+
     def calculate_tax(amount):
         return amount * TAX_RATE
     ```
   </Accordion>
-  
+
   <Accordion title="Add Docstring">
     Adds missing docstrings to functions and classes
-    
+
     ```python
     # Before
     def calculate_total(items):
         return sum(item.price for item in items)
-    
+
     # After
     def calculate_total(items):
         """Calculate total price for list of items.
-        
+
         Args:
             items: List of items with price attribute
-            
+
         Returns:
             Total sum of item prices
         """
         return sum(item.price for item in items)
     ```
   </Accordion>
-  
+
   <Accordion title="Simplify Conditionals">
     Refactors complex conditional expressions
-    
+
     ```python
     # Before
     if not (x < 10 or x > 20):
         process()
-    
+
     # After
     if 10 <= x <= 20:
         process()
     ```
   </Accordion>
-  
+
   <Accordion title="Reduce Parameters">
     Reduces function parameters using dataclasses or dicts
-    
+
     ```python
     # Before
     def create_user(name, email, age, city, country):
         pass
-    
+
     # After
     from dataclasses import dataclass
-    
+
     @dataclass
     class UserData:
         name: str
@@ -102,7 +102,7 @@ refactron refactor myfile.py
         age: int
         city: str
         country: str
-    
+
     def create_user(user: UserData):
         pass
     ```
@@ -226,29 +226,29 @@ file_ops.rollback_all()
     refactron analyze myproject/
     ```
   </Step>
-  
+
   <Step title="Preview">
     Preview refactoring suggestions
     ```bash
     refactron refactor myproject/ --preview
     ```
   </Step>
-  
+
   <Step title="Review">
     Review the diff output and risk scores
   </Step>
-  
+
   <Step title="Apply">
     Apply refactorings you want to keep
     ```bash
     refactron refactor myproject/ --type extract_constant
     ```
   </Step>
-  
+
   <Step title="Test">
     Run your tests to ensure nothing broke
   </Step>
-  
+
   <Step title="Rollback (if needed)">
     Rollback if something went wrong
     ```bash
@@ -299,19 +299,19 @@ refactron feedback <operation-id> --action accepted
   <Accordion title="Always Preview First">
     Use `--preview` to see changes before applying them
   </Accordion>
-  
+
   <Accordion title="Use Version Control">
     Commit your code before refactoring for easy rollback
   </Accordion>
-  
+
   <Accordion title="Test After Refactoring">
     Run your test suite after applying refactorings
   </Accordion>
-  
+
   <Accordion title="Start with Low Risk">
     Begin with safe refactorings, then gradually increase risk tolerance
   </Accordion>
-  
+
   <Accordion title="Refactor Incrementally">
     Refactor small portions at a time rather than entire codebase
   </Accordion>

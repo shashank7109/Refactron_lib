@@ -4,7 +4,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from refactron.core.models import CodeIssue
 
@@ -58,7 +58,7 @@ class RefactoringSuggestion:
     suggestion_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: float = field(default_factory=time.time)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.safety_result is None:
             # Default empty safety result
             self.safety_result = SafetyCheckResult(

@@ -799,4 +799,3 @@ FixRiskLevel(*values)
 Risk levels for automatic fixes.
 
 ## Functions
-

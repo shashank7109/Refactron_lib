@@ -12,14 +12,15 @@ import json
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from refactron.patterns.storage import PatternStorage
+from refactron.patterns.storage import PatternStorage  # noqa: E402
 
 
-def analyze_feedback():
+def analyze_feedback() -> Optional[Dict[str, Any]]:
     """Analyze all available feedback data."""
 
     # Find all pattern storage directories
@@ -52,23 +53,23 @@ def analyze_feedback():
         return None
 
     print(f"\n{'='*60}")
-    print(f"AGGREGATE STATISTICS")
+    print("AGGREGATE STATISTICS")
     print(f"{'='*60}\n")
 
-    print(f"📊 Total Records:")
+    print("📊 Total Records:")
     print(f"   Feedback: {len(all_feedback)}")
     print(f"   Patterns: {len(all_patterns)}")
 
     # Action distribution
     actions = Counter(f.action for f in all_feedback)
-    print(f"\n✅ Action Distribution:")
+    print("\n✅ Action Distribution:")
     for action, count in actions.most_common():
         pct = count / len(all_feedback) * 100
         print(f"   {action:12s}: {count:4d} ({pct:5.1f}%)")
 
     # Operation types
     operation_types = Counter(f.operation_type for f in all_feedback)
-    print(f"\n🔧 Operation Types:")
+    print("\n🔧 Operation Types:")
     for op_type, count in operation_types.most_common(5):
         pct = count / len(all_feedback) * 100
         print(f"   {op_type:20s}: {count:4d} ({pct:5.1f}%)")
@@ -79,24 +80,24 @@ def analyze_feedback():
     )
     with_reason = sum(1 for f in all_feedback if hasattr(f, "reason") and f.reason)
 
-    print(f"\n📋 Data Quality:")
+    print("\n📋 Data Quality:")
     print(f"   With pattern hash: {with_patterns:4d} ({with_patterns/len(all_feedback)*100:5.1f}%)")
     print(f"   With reason:       {with_reason:4d} ({with_reason/len(all_feedback)*100:5.1f}%)")
 
     # ML readiness
     quality_score = with_patterns / len(all_feedback) if all_feedback else 0
 
-    print(f"\n🎯 ML Readiness:")
+    print("\n🎯 ML Readiness:")
     print(f"   Quality Score: {quality_score:.2%}")
 
     if len(all_feedback) < 50:
-        print(f"   Status: ❌ INSUFFICIENT DATA")
+        print("   Status: ❌ INSUFFICIENT DATA")
         print(f"   Need: {50 - len(all_feedback)} more feedback records")
     elif quality_score < 0.7:
-        print(f"   Status: ⚠️  LOW QUALITY")
-        print(f"   Many records missing pattern hashes")
+        print("   Status: ⚠️  LOW QUALITY")
+        print("   Many records missing pattern hashes")
     else:
-        print(f"   Status: ✅ READY FOR TRAINING")
+        print("   Status: ✅ READY FOR TRAINING")
 
     # Save detailed report
     report = {

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import os
-from typing import Any, Dict, Optional
+from typing import Optional, cast
 
-import requests
+import requests  # type: ignore
 
 from refactron.core.credentials import load_credentials
 
@@ -94,7 +93,7 @@ class BackendLLMClient:
                 raise RuntimeError(f"Backend LLM proxy error ({response.status_code}): {error_msg}")
 
             data = response.json()
-            return data["content"]
+            return cast(str, data["content"])
 
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Failed to connect to Refactron backend: {e}")
@@ -114,6 +113,6 @@ class BackendLLMClient:
                 f"{self.backend_url}/api/llm/health",
                 timeout=10,
             )
-            return response.status_code == 200
+            return bool(response.status_code == 200)
         except Exception:
             return False

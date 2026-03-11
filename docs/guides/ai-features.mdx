@@ -120,19 +120,19 @@ refactron refactor myfile.py --ai --apply
   <Step title="Analysis">
     Refactron analyzes your code for issues
   </Step>
-  
+
   <Step title="Context Retrieval">
     RAG system retrieves relevant code chunks from your project
   </Step>
-  
+
   <Step title="LLM Generation">
     LLM generates refactoring suggestions with project context
   </Step>
-  
+
   <Step title="Safety Validation">
     Safety gate validates syntax and checks for issues
   </Step>
-  
+
   <Step title="Presentation">
     Suggestions presented with explanations and risk scores
   </Step>
@@ -158,10 +158,10 @@ AI-powered refactoring suggests:
 # AI-suggested refactoring
 def process_users(users):
     """Process and filter users based on eligibility criteria.
-    
+
     Args:
         users: List of user objects to process
-        
+
     Returns:
         List of eligible users (adult, active, verified)
     """
@@ -202,21 +202,21 @@ refactron suggest myfile.py --line 42 --apply
 <AccordionGroup>
   <Accordion title="Groq (Recommended)" icon="bolt">
     Fast, cloud-based LLM provider with free tier
-    
+
     **Models:**
     - `llama3-70b-8192` - Best quality
     - `llama3-8b-8192` - Faster, good quality
     - `mixtral-8x7b-32768` - Long context window
-    
+
     **Setup:**
     ```bash
     export GROQ_API_KEY='your-key'
     ```
   </Accordion>
-  
+
   <Accordion title="Custom Providers" icon="gear">
     Bring your own LLM provider
-    
+
     Configure in `.refactron.yaml`:
     ```yaml
     llm:
@@ -301,19 +301,19 @@ refactron feedback <operation-id> --action rejected --reason "Breaks API contrac
   <Accordion title="Keep Index Updated">
     Re-run `refactron rag index` after significant code changes for accurate context
   </Accordion>
-  
+
   <Accordion title="Use Higher-Parameter Models">
     Models like Llama 3 70B provide better refactoring logic than smaller models
   </Accordion>
-  
+
   <Accordion title="Always Preview AI Suggestions">
     Use `--preview` to review AI-generated code before applying
   </Accordion>
-  
+
   <Accordion title="Provide Feedback">
     Record feedback to improve AI suggestions over time
   </Accordion>
-  
+
   <Accordion title="Test After Applying">
     Run your test suite after applying AI refactorings
   </Accordion>
@@ -329,14 +329,14 @@ refactron feedback <operation-id> --action rejected --reason "Breaks API contrac
     ```
     Export it in your shell profile for persistence
   </Accordion>
-  
+
   <Accordion title="RAG Index Not Found">
     Create index first:
     ```bash
     refactron rag index
     ```
   </Accordion>
-  
+
   <Accordion title="Slow AI Responses">
     - Use smaller models (llama3-8b-8192)
     - Reduce `max_tokens`

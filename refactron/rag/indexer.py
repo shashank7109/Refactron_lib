@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 try:
     import chromadb
@@ -20,7 +20,7 @@ except ImportError:
     CHROMA_AVAILABLE = False
 
 from refactron.rag.chunker import CodeChunk
-from refactron.rag.parser import CodeParser, ParsedFile
+from refactron.rag.parser import CodeParser
 
 # Import for type hints
 try:
@@ -60,7 +60,8 @@ class RAGIndexer:
         """
         if not CHROMA_AVAILABLE:
             raise RuntimeError(
-                "ChromaDB is not available. Install with: pip install chromadb sentence-transformers"
+                "ChromaDB is not available. "
+                "Install with: pip install chromadb sentence-transformers"
             )
 
         self.workspace_path = Path(workspace_path)
@@ -68,7 +69,7 @@ class RAGIndexer:
         self.index_path.mkdir(exist_ok=True)
 
         # Initialize LLM client for summarization
-        from refactron.llm.client import GroqClient
+        # GroqClient is used for type hints and potential init below
 
         self.llm_client = llm_client
 
@@ -125,7 +126,7 @@ class RAGIndexer:
         ]
 
         total_chunks = 0
-        chunk_type_counts = {}
+        chunk_type_counts: Dict[str, int] = {}
 
         # Index each file
         for py_file in python_files:
@@ -181,7 +182,7 @@ class RAGIndexer:
                 try:
                     summary = self._summarize_chunk(chunk)
                     if summary:
-                        # Prepend summary to content for embedding (makes it searchable by plain English)
+                        # Prepend summary for semantic searchability
                         chunk.content = f"Summary: {summary}\n\n{chunk.content}"
                         chunk.metadata["ai_summary"] = summary
                 except Exception as e:
@@ -207,7 +208,10 @@ class RAGIndexer:
         try:
             summary = self.llm_client.generate(
                 prompt=prompt,
-                system="You are a senior software architect. Provide a concise, semantic summary of code purpose.",
+                system=(
+                    "You are a senior software architect. "
+                    "Provide a concise, semantic summary of code purpose."
+                ),
                 max_tokens=100,
             )
             return summary.strip()
@@ -271,17 +275,17 @@ class RAGIndexer:
             index_path=str(self.index_path),
         )
 
-    def _save_metadata(self, metadata: dict) -> None:
+    def _save_metadata(self, metadata: Dict[str, Any]) -> None:
         """Save index metadata."""
         metadata_file = self.index_path / "metadata.json"
         with open(metadata_file, "w") as f:
             json.dump(metadata, f, indent=2)
 
-    def _load_metadata(self) -> dict:
+    def _load_metadata(self) -> Dict[str, Any]:
         """Load index metadata."""
         metadata_file = self.index_path / "metadata.json"
         if not metadata_file.exists():
             return {}
 
         with open(metadata_file, "r") as f:
-            return json.load(f)
+            return cast(Dict[str, Any], json.load(f))

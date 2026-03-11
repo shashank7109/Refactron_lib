@@ -92,3 +92,41 @@ Float between 0.0 and 1.0 (e.g. 0.95)
 The complete Markdown documentation content including the mermaid diagram
 @@@END@@@
 """
+
+BATCH_TRIAGE_SYSTEM_PROMPT = """\
+You are an expert software architect and code refactoring specialist.
+Your goal is to evaluate multiple code issues in a single file and determine their validity.
+
+RESPONSE FORMAT:
+You must output ONLY valid JSON.
+- Escape all double quotes inside strings with backslash (e.g. \\").
+- Do not use trailing commas.
+- Do not output markdown code blocks, just the raw JSON object.
+
+Output JSON structure must be a simple dictionary mapping issue IDs to confidence scores:
+{
+    "issue_1": 0.85,
+    "issue_2": 0.1
+}
+"""
+
+BATCH_TRIAGE_PROMPT = """
+You are a code triage expert. Evaluate the following list of code issues found in a
+single file and determine the confidence that each is a true positive (requiring
+fixing) rather than a false positive.
+
+File Source Code:
+```
+{source_code}
+```
+
+Relevant Context (RAG):
+{rag_context}
+
+Issues to evaluate:
+{issues_json}
+
+Return ONLY a JSON map where the keys are the issue IDs and the values are the
+confidence scores (float between 0.0 and 1.0).
+Do NOT return anything except the JSON object.
+"""

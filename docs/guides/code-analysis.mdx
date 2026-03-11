@@ -49,7 +49,7 @@ for issue in analysis.issues:
     - **Code Injection**: Use of `eval()` and `exec()`
     - **Hardcoded Secrets**: API keys, passwords in code
     - **SSRF Vulnerabilities**: Unsafe URL handling
-    
+
     ```python
     # ❌ Security issue detected
     query = f"SELECT * FROM users WHERE id = {user_id}"  # SQL injection
@@ -57,14 +57,14 @@ for issue in analysis.issues:
     API_KEY = "hardcoded-secret-123"  # Hardcoded secret
     ```
   </Accordion>
-  
+
   <Accordion icon="code" title="Code Quality">
     Identifies code smells and maintainability issues:
     - **Magic Numbers**: Unexplained numeric constants
     - **Long Functions**: Functions exceeding length threshold
     - **Excessive Parameters**: Too many function parameters
     - **Deep Nesting**: Complex nested control structures
-    
+
     ```python
     # ❌ Code quality issues
     def process(a, b, c, d, e, f, g):  # Too many parameters
@@ -75,14 +75,14 @@ for issue in analysis.issues:
                         return 42  # Magic number
     ```
   </Accordion>
-  
+
   <Accordion icon="chart-line" title="Complexity Metrics">
     Measures code complexity:
     - **Cyclomatic Complexity**: Control flow complexity
     - **Cognitive Complexity**: Human readability complexity
     - **Maintainability Index**: Overall maintainability score
     - **Nested Loops**: Performance-impacting nested iterations
-    
+
     ```python
     # ❌ High complexity
     def complex_function(data):
@@ -94,51 +94,51 @@ for issue in analysis.issues:
                         process(val)
     ```
   </Accordion>
-  
+
   <Accordion icon="file-code" title="Type Hints">
     Checks type annotation coverage:
     - Missing function type hints
     - Incomplete parameter annotations
     - Missing return type annotations
-    
+
     ```python
     # ❌ Missing type hints
     def calculate(x, y):  # No type hints
         return x + y
-    
+
     # ✅ Properly typed
     def calculate(x: int, y: int) -> int:
         return x + y
     ```
   </Accordion>
-  
+
   <Accordion icon="trash" title="Dead Code Detection">
     Finds unused and unreachable code:
     - Unused variables
     - Unused functions
     - Unreachable code blocks
-    
+
     ```python
     # ❌ Dead code
     def process():
         result = expensive_calculation()  # Unused variable
         return None
-    
+
     def unused_function():  # Never called
         pass
-    
+
     def example():
         return True
         print("Never executed")  # Unreachable
     ```
   </Accordion>
-  
+
   <Accordion icon="link" title="Dependency Analysis">
     Analyzes import patterns:
     - Circular imports
     - Wildcard imports
     - Deprecated modules
-    
+
     ```python
     # ❌ Dependency issues
     from module_a import *  # Wildcard import

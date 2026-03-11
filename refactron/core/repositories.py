@@ -76,7 +76,6 @@ def list_repositories(api_base_url: str, timeout_seconds: int = 10) -> List[Repo
     if creds.expires_at:
         try:
             # Parse the expiration time
-            from datetime import datetime
 
             if isinstance(creds.expires_at, str):
                 # Remove timezone info for comparison
@@ -122,8 +121,9 @@ def list_repositories(api_base_url: str, timeout_seconds: int = 10) -> List[Repo
                 )
                 if not isinstance(repositories_data, list):
                     raise RuntimeError(
-                        f"Unexpected API response format. Expected list or dict with 'repositories' key. "
-                        f"Got: {type(data)} with keys: {list(data.keys()) if isinstance(data, dict) else 'N/A'}"
+                        f"Unexpected API response format. Expected list or dict with "
+                        f"'repositories' key. Got: {type(data)} with keys: "
+                        f"{list(data.keys()) if isinstance(data, dict) else 'N/A'}"
                     )
             else:
                 raise RuntimeError(f"Unexpected API response type: {type(data)}")
@@ -151,7 +151,8 @@ def list_repositories(api_base_url: str, timeout_seconds: int = 10) -> List[Repo
             )
         elif e.code == 403:
             raise RuntimeError(
-                "GitHub access denied. Please reconnect your GitHub account on the Refactron website."
+                "GitHub access denied. "
+                "Please reconnect your GitHub account on the Refactron website."
             )
         elif e.code == 404:
             raise RuntimeError(

@@ -5,13 +5,19 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from refactron.core.models import CodeIssue, IssueCategory, IssueLevel
 from refactron.llm.backend_client import BackendLLMClient
 from refactron.llm.client import GroqClient
 from refactron.llm.models import RefactoringSuggestion, SuggestionStatus
-from refactron.llm.prompts import DOCUMENTATION_PROMPT, SUGGESTION_PROMPT, SYSTEM_PROMPT
+from refactron.llm.prompts import (
+    BATCH_TRIAGE_PROMPT,
+    BATCH_TRIAGE_SYSTEM_PROMPT,
+    DOCUMENTATION_PROMPT,
+    SUGGESTION_PROMPT,
+    SYSTEM_PROMPT,
+)
 from refactron.llm.safety import SafetyGate
 from refactron.rag.retriever import ContextRetriever
 
@@ -32,7 +38,8 @@ class LLMOrchestrator:
         if llm_client:
             self.client = llm_client
         else:
-            # Try to use GroqClient if API key is present, otherwise use BackendLLMClient
+            # Try to use GroqClient if API key is present,
+            # otherwise use BackendLLMClient
             if os.getenv("GROQ_API_KEY"):
                 try:
                     self.client = GroqClient()
@@ -245,6 +252,96 @@ class LLMOrchestrator:
                 model_name=self.client.model,
                 status=SuggestionStatus.FAILED,
             )
+
+    def evaluate_issues_batch(self, issues: List[CodeIssue], source_code: str) -> Dict[str, float]:
+        """Evaluate a batch of issues for a single file to suppress false positives.
+
+        Args:
+            issues: List of CodeIssues found in the file
+            source_code: The full source code of the file
+
+        Returns:
+            Dict mapping issue IDs (using rule_id or index) to confidence scores
+        """
+        if not issues:
+            return {}
+
+        # 1. Retrieve Context
+        context_snippets = []
+        if self.retriever:
+            try:
+                # Search for similar code or relevant context
+                results = self.retriever.retrieve_similar(source_code[:1000], top_k=3)
+                context_snippets = [r.content for r in results]
+            except Exception as e:
+                logger.warning(f"Context retrieval failed: {e}")
+
+        rag_context = "\n\n".join(context_snippets) if context_snippets else "No context available."
+
+        # 2. Construct JSON for issues
+        issues_data = {}
+        for i, issue in enumerate(issues):
+            # Determine a stable, unique issue ID
+            base_id = getattr(issue, "rule_id", None) or "issue"
+
+            # Prefer to include line number when available for better stability
+            line_number = getattr(issue, "line_number", None)
+            id_parts = [str(base_id)]
+            if line_number is not None:
+                id_parts.append(str(line_number))
+            # Always include the index as a final disambiguator
+            id_parts.append(str(i))
+            issue_id = ":".join(id_parts)
+
+            # Ensure uniqueness in case of unexpected collisions
+            unique_id = issue_id
+            suffix = 1
+            while unique_id in issues_data:
+                suffix += 1
+                unique_id = f"{issue_id}_{suffix}"
+
+            issues_data[unique_id] = {
+                "rule_id": getattr(issue, "rule_id", None),
+                "message": issue.message,
+                "line": issue.line_number,
+                "category": (
+                    issue.category.value
+                    if hasattr(issue.category, "value")
+                    else str(issue.category)
+                ),
+                "severity": (
+                    issue.level.value if hasattr(issue.level, "value") else str(issue.level)
+                ),
+            }
+
+        # 3. Construct Prompt
+        prompt = BATCH_TRIAGE_PROMPT.format(
+            source_code=source_code,
+            rag_context=rag_context,
+            issues_json=json.dumps(issues_data, indent=2),
+        )
+
+        # 4. Call LLM
+        try:
+            response_text = self.client.generate(
+                prompt=prompt, system=BATCH_TRIAGE_SYSTEM_PROMPT, temperature=0.1
+            )
+            clean_text = self._clean_json_response(response_text)
+            data = json.loads(clean_text, strict=False)
+
+            # Ensure we return a Dict[str, float]
+            result = {}
+            for k, v in data.items():
+                try:
+                    result[str(k)] = float(v)
+                except (ValueError, TypeError):
+                    result[str(k)] = 0.5  # Fallback for parsing errors
+            return result
+
+        except Exception as e:
+            logger.error(f"Batch triage failed: {e}")
+            # Fallback: return default confidence
+            return {str(k): 0.5 for k in issues_data.keys()}
 
     def _clean_json_response(self, text: str) -> str:
         """Clean LLM response to extract JSON."""

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import Optional, cast
 
 try:
     from groq import Groq
@@ -79,7 +79,7 @@ class GroqClient:
             max_tokens=max_tokens or self.max_tokens,
         )
 
-        return response.choices[0].message.content
+        return cast(str, response.choices[0].message.content)
 
     def check_health(self) -> bool:
         """Check if the Groq API is accessible.

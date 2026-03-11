@@ -121,7 +121,8 @@ class WorkspaceManager:
         # Try matching by short name (repo name without user)
         repo_name_lower = repo_name.lower()
         for full_name, workspace_data in workspaces.items():
-            # Extract short name from full name (e.g., "volumeofsphere" from "omsherikar/volumeofsphere")
+            # Extract short name from full name
+            # (e.g., "volumeofsphere" from "omsherikar/volumeofsphere")
             short_name = full_name.split("/")[-1].lower()
             if short_name == repo_name_lower:
                 return WorkspaceMapping.from_dict(workspace_data)

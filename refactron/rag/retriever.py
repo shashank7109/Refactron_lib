@@ -50,7 +50,8 @@ class ContextRetriever:
         """
         if not CHROMA_AVAILABLE:
             raise RuntimeError(
-                "ChromaDB is not available. Install with: pip install chromadb sentence-transformers"
+                "ChromaDB is not available. "
+                "Install with: pip install chromadb sentence-transformers"
             )
 
         self.workspace_path = Path(workspace_path)
