@@ -280,12 +280,27 @@ class LLMOrchestrator:
         # 2. Construct JSON for issues
         issues_data = {}
         for i, issue in enumerate(issues):
-            # Determine a stable issue ID
-            issue_id = getattr(issue, "rule_id", None)
-            if not issue_id:
-                issue_id = f"issue_{i}"
+            # Determine a stable, unique issue ID
+            base_id = getattr(issue, "rule_id", None) or "issue"
 
-            issues_data[issue_id] = {
+            # Prefer to include line number when available for better stability
+            line_number = getattr(issue, "line_number", None)
+            id_parts = [str(base_id)]
+            if line_number is not None:
+                id_parts.append(str(line_number))
+            # Always include the index as a final disambiguator
+            id_parts.append(str(i))
+            issue_id = ":".join(id_parts)
+
+            # Ensure uniqueness in case of unexpected collisions
+            unique_id = issue_id
+            suffix = 1
+            while unique_id in issues_data:
+                suffix += 1
+                unique_id = f"{issue_id}_{suffix}"
+
+            issues_data[unique_id] = {
+                "rule_id": getattr(issue, "rule_id", None),
                 "message": issue.message,
                 "line": issue.line_number,
                 "category": (
