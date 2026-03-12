@@ -23,7 +23,9 @@ def mock_auth(monkeypatch):
         plan="pro",
         api_key="ref_FAKE",
     )
-    monkeypatch.setattr("refactron.cli.load_credentials", lambda: fake_creds)
+    import sys
+    import refactron.cli.main
+    monkeypatch.setattr(sys.modules["refactron.cli.main"], "load_credentials", lambda: fake_creds)
 
 
 class TestBackupManager:

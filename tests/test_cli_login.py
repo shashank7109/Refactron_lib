@@ -4,7 +4,8 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from refactron.cli import ApiKeyValidationResult, main
+from refactron.cli.main import main
+from refactron.cli.utils import ApiKeyValidationResult
 from refactron.core.credentials import RefactronCredentials
 from refactron.core.device_auth import DeviceAuthorization, TokenResponse
 
@@ -13,7 +14,11 @@ def test_login_device_code_flow(monkeypatch, tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Pretend there are no existing credentials so login flow runs
-    monkeypatch.setattr("refactron.cli.load_credentials", lambda: None)
+    import sys
+    import refactron.cli.main
+    import refactron.cli.auth
+    monkeypatch.setattr(sys.modules["refactron.cli.main"], "load_credentials", lambda: None)
+    monkeypatch.setattr(sys.modules["refactron.cli.auth"], "load_credentials", lambda: None)
 
     # Stub device authorization response
     def _mock_start_device_authorization(api_base_url: str, timeout_seconds: int = 10):
@@ -60,15 +65,15 @@ def test_login_device_code_flow(monkeypatch, tmp_path: Path) -> None:
         return "ref_TESTKEY"
 
     monkeypatch.setattr(
-        "refactron.cli.start_device_authorization", _mock_start_device_authorization
+        "refactron.cli.auth.start_device_authorization", _mock_start_device_authorization
     )
-    monkeypatch.setattr("refactron.cli.poll_for_token", _mock_poll_for_token)
-    monkeypatch.setattr("refactron.cli.save_credentials", _mock_save_credentials)
-    monkeypatch.setattr("refactron.cli.credentials_path", _mock_credentials_path)
-    monkeypatch.setattr("refactron.cli.click.prompt", _mock_prompt)
+    monkeypatch.setattr("refactron.cli.auth.poll_for_token", _mock_poll_for_token)
+    monkeypatch.setattr("refactron.cli.auth.save_credentials", _mock_save_credentials)
+    monkeypatch.setattr("refactron.cli.auth.credentials_path", _mock_credentials_path)
+    monkeypatch.setattr("refactron.cli.auth.click.prompt", _mock_prompt)
     # API key should be verified before being stored
     monkeypatch.setattr(
-        "refactron.cli._validate_api_key",
+        "refactron.cli.auth._validate_api_key",
         lambda *args, **kwargs: ApiKeyValidationResult(ok=True, message="Verified."),
     )
 
@@ -78,7 +83,7 @@ def test_login_device_code_flow(monkeypatch, tmp_path: Path) -> None:
     assert "Login" in result.output
     assert "ABCD-EFGH" in result.output
     assert "app.refactron.dev/login" in result.output
-    assert "Login complete" in result.output
+    assert "Login Successful" in result.output
     assert "user@example.com" in result.output
     assert "pro" in result.output
 
@@ -93,17 +98,26 @@ def test_login_device_code_flow(monkeypatch, tmp_path: Path) -> None:
 def test_logout_no_credentials(monkeypatch) -> None:
     runner = CliRunner()
 
-    monkeypatch.setattr("refactron.cli.delete_credentials", lambda: False)
+    import sys
+    import refactron.cli.main
+    import refactron.cli.auth
+    monkeypatch.setattr(sys.modules["refactron.cli.main"], "load_credentials", lambda: None)
+    monkeypatch.setattr(sys.modules["refactron.cli.auth"], "load_credentials", lambda: None)
+    monkeypatch.setattr("refactron.cli.auth.delete_credentials", lambda path: False)
 
     result = runner.invoke(main, ["logout"])
     assert result.exit_code == 0
-    assert "No stored credentials found" in result.output
+    assert "No credentials found at" in result.output
 
 
 def test_auth_status_not_logged_in(monkeypatch) -> None:
     runner = CliRunner()
 
-    monkeypatch.setattr("refactron.cli.load_credentials", lambda: None)
+    import sys
+    import refactron.cli.main
+    import refactron.cli.auth
+    monkeypatch.setattr(sys.modules["refactron.cli.main"], "load_credentials", lambda: None)
+    monkeypatch.setattr(sys.modules["refactron.cli.auth"], "load_credentials", lambda: None)
 
     result = runner.invoke(main, ["auth", "status"])
     assert result.exit_code == 0
@@ -125,11 +139,15 @@ def test_login_skips_when_already_logged_in(monkeypatch, tmp_path: Path) -> None
     )
 
     # load_credentials returns an existing valid credential
-    monkeypatch.setattr("refactron.cli.load_credentials", lambda: fake_creds)
+    import sys
+    import refactron.cli.main
+    import refactron.cli.auth
+    monkeypatch.setattr(sys.modules["refactron.cli.main"], "load_credentials", lambda: fake_creds)
+    monkeypatch.setattr(sys.modules["refactron.cli.auth"], "load_credentials", lambda: fake_creds)
 
     # Ensure device flow is NOT called
     monkeypatch.setattr(
-        "refactron.cli.start_device_authorization",
+        "refactron.cli.auth.start_device_authorization",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("should not be called")),
     )
 
@@ -143,7 +161,11 @@ def test_login_does_not_save_invalid_api_key(monkeypatch, tmp_path: Path) -> Non
     """If API key fails verification, login should abort and not store it."""
     runner = CliRunner()
 
-    monkeypatch.setattr("refactron.cli.load_credentials", lambda: None)
+    import sys
+    import refactron.cli.main
+    import refactron.cli.auth
+    monkeypatch.setattr(sys.modules["refactron.cli.main"], "load_credentials", lambda: None)
+    monkeypatch.setattr(sys.modules["refactron.cli.auth"], "load_credentials", lambda: None)
 
     def _mock_start_device_authorization(api_base_url: str, timeout_seconds: int = 10):
         return DeviceAuthorization(
@@ -182,15 +204,15 @@ def test_login_does_not_save_invalid_api_key(monkeypatch, tmp_path: Path) -> Non
         return "ref_INVALID"
 
     monkeypatch.setattr(
-        "refactron.cli.start_device_authorization", _mock_start_device_authorization
+        "refactron.cli.auth.start_device_authorization", _mock_start_device_authorization
     )
-    monkeypatch.setattr("refactron.cli.poll_for_token", _mock_poll_for_token)
-    monkeypatch.setattr("refactron.cli.save_credentials", _mock_save_credentials)
-    monkeypatch.setattr("refactron.cli.credentials_path", _mock_credentials_path)
-    monkeypatch.setattr("refactron.cli.click.prompt", _mock_prompt)
+    monkeypatch.setattr("refactron.cli.auth.poll_for_token", _mock_poll_for_token)
+    monkeypatch.setattr("refactron.cli.auth.save_credentials", _mock_save_credentials)
+    monkeypatch.setattr("refactron.cli.auth.credentials_path", _mock_credentials_path)
+    monkeypatch.setattr("refactron.cli.auth.click.prompt", _mock_prompt)
     # Simulate backend rejecting the key
     monkeypatch.setattr(
-        "refactron.cli._validate_api_key",
+        "refactron.cli.auth._validate_api_key",
         lambda *args, **kwargs: ApiKeyValidationResult(ok=False, message="Invalid API key."),
     )
 

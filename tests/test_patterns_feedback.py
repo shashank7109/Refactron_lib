@@ -377,7 +377,7 @@ class TestFeedbackCLIIntegration:
         """Test that --apply automatically records feedback."""
         from click.testing import CliRunner
 
-        from refactron.cli import refactor
+        from refactron.cli.refactor import refactor
 
         runner = CliRunner()
 
@@ -412,7 +412,7 @@ def calculate(price):
         """Test that feedback command exists and works."""
         from click.testing import CliRunner
 
-        from refactron.cli import main
+        from refactron.cli.main import main
 
         runner = CliRunner()
         result = runner.invoke(main, ["--help"])
@@ -424,7 +424,7 @@ def calculate(price):
         """Test that feedback command records feedback correctly."""
         from click.testing import CliRunner
 
-        from refactron.cli import feedback
+        from refactron.cli.cicd import feedback
 
         runner = CliRunner()
 

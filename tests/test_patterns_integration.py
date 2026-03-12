@@ -370,7 +370,7 @@ class TestCLIFeedbackCollectionIntegration:
         """Test that CLI feedback collection works end-to-end."""
         from click.testing import CliRunner
 
-        from refactron.cli import feedback
+        from refactron.cli.cicd import feedback
 
         runner = CliRunner()
 
