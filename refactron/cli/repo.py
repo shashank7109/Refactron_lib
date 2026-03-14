@@ -110,13 +110,13 @@ def repo_list(api_base_url: str) -> None:
 
 
 @repo.command("connect")
-@click.argument("repo_name", required=False)
+@click.argument("repo_or_dir", required=False)
 @click.option(
     "--path",
     "-p",
     type=click.Path(file_okay=False),
     default=None,
-    help="Local path to connect (default: auto-clone to managed workspace)",
+    help="Local path to connect (deprecated, use 'refactron connect .')",
 )
 @click.option(
     "--api-base-url",
@@ -124,14 +124,25 @@ def repo_list(api_base_url: str) -> None:
     show_default=True,
     help="Refactron API base URL",
 )
-def repo_connect(repo_name: Optional[str], path: Optional[str], api_base_url: str) -> None:
+@click.option(
+    "--ssh",
+    is_flag=True,
+    help="Clone using SSH instead of HTTPS when falling back to the API",
+)
+def repo_connect(
+    repo_or_dir: Optional[str], path: Optional[str], api_base_url: str, ssh: bool
+) -> None:
     """
     Connect to a GitHub repository.
 
-    REPO_NAME: Name of the repository (e.g., 'my-project' or 'user/my-project')
+    Run inside a git repository to connect it instantly:
+      $ refactron repo connect
 
-    If the repository doesn't exist locally, it will be cloned automatically
-    to ~/.refactron/workspaces/<repo-name>/
+    Or provide a repository name to clone it from GitHub:
+      $ refactron repo connect user/my-project
+
+    Or clone it via SSH instead of HTTPS:
+      $ refactron repo connect --ssh user/my-project
     """
     _setup_logging()
     console.print()
@@ -140,113 +151,167 @@ def repo_connect(repo_name: Optional[str], path: Optional[str], api_base_url: st
 
     workspace_mgr = WorkspaceManager()
 
-    # If path is provided, use existing behavior (map existing local directory)
+    # Determine the target local path
+    # Priority: 1. --path (deprecated), 2. repo_or_dir if it's a directory,
+    # 3. current working directory
+    local_path = Path.cwd()
     if path:
         local_path = Path(path).resolve()
+    elif repo_or_dir and Path(repo_or_dir).is_dir():
+        local_path = Path(repo_or_dir).resolve()
 
-        # Auto-detect repository if not provided
-        if not repo_name:
-            console.print("[dim]No repository specified, attempting auto-detection...[/dim]\n")
-            detected = workspace_mgr.detect_repository(local_path)
-            if detected:
-                console.print(f"[success]Detected repository: {detected}[/success]\n")
-                repo_name = detected
-            else:
-                console.print(
-                    "[red]Could not auto-detect repository from .git config.[/red]\n"
-                    "[dim]Please specify the repository name:[/dim]\n"
-                    "  refactron repo connect <repo-name>\n"
-                )
-                raise SystemExit(1)
-    else:
-        # No path provided - must have repo_name for cloning
-        if not repo_name:
-            console.print(
-                "[red]Error: Repository name is required when not in a git directory.[/red]\n\n"
-                "[dim]Usage:[/dim]\n"
-                "  refactron repo connect <repo-name>    # Auto-clone to workspace\n"
-                "  refactron repo connect --path .       # Link current directory\n"
+    # == SOURCE A: Local Offline Flow (Primary) ==
+    console.print("[dim]Checking for local git repository...[/dim]")
+    detected_repo = workspace_mgr.detect_repository(local_path)
+
+    if detected_repo:
+        # We are inside a valid git repository! Connect offline.
+        repo_name = detected_repo.split("/")[-1] if "/" in detected_repo else detected_repo
+
+        mapping = WorkspaceMapping(
+            repo_id=None,  # Offline path doesn't know the DB ID
+            repo_name=repo_name,
+            repo_full_name=detected_repo,
+            local_path=str(local_path),
+            connected_at=datetime.now(timezone.utc).isoformat(),
+        )
+        workspace_mgr.add_workspace(mapping)
+
+        # Trigger background indexing
+        _spawn_background_indexer(local_path)
+
+        console.print(
+            Panel(
+                f"[success]Successfully connected![/success]\n\n"
+                f"Repository: [bold]{detected_repo}[/bold] [dim](detected from .git/config)[/dim]\n"
+                f"Workspace:  [bold]{local_path}[/bold]\n\n"
+                f"[yellow]Next step:[/yellow]\n"
+                f"[bold cyan]refactron analyze .[/bold cyan]",
+                title="✓ Connected (Local)",
+                border_style="success",
+                box=box.ROUNDED,
             )
-            raise SystemExit(1)
+        )
+        return
 
-    # Fetch available repositories
-    try:
-        with console.status("[primary]Fetching repositories...[/primary]"):
-            repositories = list_repositories(api_base_url)
-    except RuntimeError as e:
-        console.print(f"[red]Error: {e}[/red]")
+    # == SOURCE B: API Fallback Flow ==
+    # We only get here if there is no local git repository found.
+
+    # We must have a repo name to clone if we are not in a git repo.
+    if not repo_or_dir or Path(repo_or_dir).is_dir():
+        console.print(
+            "[red]Error: Not a git repository. Run inside a git repo or "
+            "provide a repo name.[/red]\n\n"
+            "[dim]Usage:[/dim]\n"
+            "  refactron repo connect                # Auto-detect current directory\n"
+            "  refactron repo connect <repo-name>    # Auto-clone from GitHub\n"
+        )
         raise SystemExit(1)
 
-    # Find matching repository
+    repo_name_target = repo_or_dir
+
+    try:
+        with console.status("[primary]Fetching repositories from API...[/primary]"):
+            repositories = list_repositories(api_base_url)
+    except RuntimeError as e:
+        console.print(f"[red]Authentication required for cloning:[/red] {e}")
+        console.print(
+            "[dim]Run 'refactron repo connect' inside an existing git "
+            "repository to connect offline.[/dim]"
+        )
+        raise SystemExit(1)
+
     matching_repo: Optional[Repository] = None
     for repository in repositories:
         if (
-            repository.name.lower() == repo_name.lower()
-            or repository.full_name.lower() == repo_name.lower()
+            repository.name.lower() == repo_name_target.lower()
+            or repository.full_name.lower() == repo_name_target.lower()
         ):
             matching_repo = repository
             break
 
     if not matching_repo:
         console.print(
-            f"[red]Repository '{repo_name}' not found in your connected repositories.[/red]\n"
+            f"[red]Repository '{repo_name_target}' not found in your "
+            "connected repositories.[/red]\n"
         )
         console.print("[dim]Available repositories:[/dim]")
         for repository in repositories[:5]:
             console.print(f"  - {repository.full_name}")
         if len(repositories) > 5:
             console.print(f"  ... and {len(repositories) - 5} more")
-        console.print("\n[dim]Run 'refactron repo list' to see all repositories.[/dim]")
         raise SystemExit(1)
 
-    # If no path provided, clone to managed workspace
-    if not path:
-        workspace_root = Path.home() / ".refactron" / "workspaces"
-        workspace_root.mkdir(parents=True, exist_ok=True)
-        local_path = workspace_root / matching_repo.name
+    # Pyre2 needs a hint that matching_repo is definitely not None here
+    if matching_repo is None:
+        raise SystemExit(1)
 
-        # Check if already cloned
-        if local_path.exists():
-            console.print(f"[dim]Repository already exists at: {local_path}[/dim]\n")
-        else:
-            # Clone the repository
-            console.print(f"[primary]Cloning {matching_repo.full_name}...[/primary]\n")
+    # Clone to managed workspace if we didn't explicitly ask to map a local un-git path
+    workspace_root = Path.home() / ".refactron" / "workspaces"
+    workspace_root.mkdir(parents=True, exist_ok=True)
+    clone_path = workspace_root / matching_repo.name
 
-            try:
-                subprocess.run(
-                    ["git", "clone", matching_repo.clone_url, str(local_path)],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                console.print(f"[success]✓ Cloned successfully to {local_path}[/success]\n")
-            except subprocess.CalledProcessError as e:
-                console.print(f"[red]Failed to clone repository:[/red]\n{e.stderr}")
-                raise SystemExit(1)
-            except FileNotFoundError:
+    if clone_path.exists():
+        console.print(f"[dim]Repository already exists at: {clone_path}[/dim]\n")
+    else:
+        clone_target_url = matching_repo.ssh_url if ssh else matching_repo.clone_url
+        console.print(
+            f"[primary]Cloning {matching_repo.full_name} via "
+            f"{'SSH' if ssh else 'HTTPS'}...[/primary]\n"
+        )
+        try:
+            subprocess.run(
+                ["git", "clone", clone_target_url, str(clone_path)],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            console.print(f"[success]✓ Cloned successfully to {clone_path}[/success]\n")
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]Failed to clone repository:[/red]\n{e.stderr}")
+            if not ssh:
                 console.print(
-                    "[red]Error: git command not found.[/red]\n"
-                    "[dim]Please install git or use --path to connect an existing directory.[/dim]"
+                    "\n[yellow]Hint: If HTTPS cloning is blocked or failing, "
+                    "try using SSH instead:[/yellow]\n"
+                    f"[bold cyan]  refactron repo connect --ssh {repo_name_target}[/bold cyan]"
                 )
-                raise SystemExit(1)
+            raise SystemExit(1)
+        except FileNotFoundError:
+            console.print("[red]Error: git command not found.[/red]")
+            raise SystemExit(1)
 
-    # Create workspace mapping
     mapping = WorkspaceMapping(
         repo_id=matching_repo.id,
         repo_name=matching_repo.name,
         repo_full_name=matching_repo.full_name,
-        local_path=str(local_path),
+        local_path=str(clone_path),
         connected_at=datetime.now(timezone.utc).isoformat(),
     )
-
     workspace_mgr.add_workspace(mapping)
 
-    # Trigger background indexing via subprocess
-    # We spawn a separate process so it survives after this CLI command exits
+    _spawn_background_indexer(clone_path)
+
+    cd_command = f"cd {clone_path}"
+    console.print(
+        Panel(
+            f"[success]Successfully connected![/success]\n\n"
+            f"Repository: [bold]{matching_repo.full_name}[/bold] [dim](cloned from GitHub)[/dim]\n"
+            f"Workspace:  [bold]{clone_path}[/bold]\n\n"
+            f"[yellow]To navigate to this directory, run:[/yellow]\n"
+            f"[bold cyan]{cd_command}[/bold cyan]\n\n"
+            f"[yellow]Next step:[/yellow]\n"
+            f"[bold cyan]refactron analyze .[/bold cyan]",
+            title="✓ Connected (API)",
+            border_style="success",
+            box=box.ROUNDED,
+        )
+    )
+
+
+def _spawn_background_indexer(local_path: Path) -> None:
+    """Helper to start the RAG indexer in the background."""
     console.print("[dim]Spawning background indexer...[/dim]")
     try:
-        # Run 'refactron rag index' in the background
-        # We redirect output to DEVNULL to keep it quiet
         pid = subprocess.Popen(
             [
                 sys.executable,
@@ -259,31 +324,12 @@ def repo_connect(repo_name: Optional[str], path: Optional[str], api_base_url: st
             cwd=str(local_path),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            start_new_session=True,  # Detach from terminal
+            start_new_session=True,
         ).pid
         console.print(f"[dim]Indexing started in background (PID: {pid}).[/dim]")
         console.print("[dim]Run 'refactron rag status' to check progress.[/dim]")
     except Exception as e:
         console.print(f"[yellow]Auto-indexing failed to start: {e}[/yellow]")
-
-    # Create helpful navigation command
-    cd_command = f"cd {local_path}"
-
-    console.print(
-        Panel(
-            f"[success]Successfully connected![/success]\n\n"
-            f"Repository: [bold]{matching_repo.full_name}[/bold]\n"
-            f"Local Path: [bold]{local_path}[/bold]\n\n"
-            f"[yellow]To navigate to this directory, run:[/yellow]\n"
-            f"[bold cyan]{cd_command}[/bold cyan]",
-            title="✓ Connected",
-            border_style="success",
-            box=box.ROUNDED,
-        )
-    )
-
-    # Also print the cd command separately for easy copying
-    console.print(f"\n[dim]Quick copy:[/dim] [bold cyan]{cd_command}[/bold cyan]\n")
 
 
 @repo.command("disconnect")

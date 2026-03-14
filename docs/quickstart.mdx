@@ -36,9 +36,18 @@ Follow this workflow to get the most out of Refactron:
   </Step>
 
   <Step title="Connect Repository (Optional)">
-    Connect your GitHub repository for enhanced features:
+    Connect your GitHub repository for enhanced features.
+
+    If you are already inside a cloned git repository, simply run:
     ```bash
     refactron repo connect
+    ```
+
+    To clone a repository from your GitHub account instead:
+    ```bash
+    refactron repo connect my-project
+    # Use --ssh if you prefer SSH keys over HTTPS
+    refactron repo connect --ssh my-project
     ```
   </Step>
 
