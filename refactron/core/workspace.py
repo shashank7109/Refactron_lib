@@ -18,31 +18,30 @@ from urllib.parse import urlparse
 class WorkspaceMapping:
     """Represents a mapping between a remote repository and a local path."""
 
-    repo_id: int
     repo_name: str
     repo_full_name: str
     local_path: str
     connected_at: str
+    repo_id: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
-            "repo_id": self.repo_id,
-            "repo_name": self.repo_name,
             "repo_full_name": self.repo_full_name,
             "local_path": self.local_path,
             "connected_at": self.connected_at,
+            "repo_id": self.repo_id,
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WorkspaceMapping":
         """Create from dictionary."""
         return cls(
-            repo_id=data["repo_id"],
             repo_name=data["repo_name"],
             repo_full_name=data["repo_full_name"],
             local_path=data["local_path"],
             connected_at=data["connected_at"],
+            repo_id=data.get("repo_id"),
         )
 
 
