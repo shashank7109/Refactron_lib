@@ -2,32 +2,55 @@
 
 import ast
 import copy
+import logging
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
 from refactron.analyzers.base_analyzer import BaseAnalyzer
+from refactron.core.config import RefactronConfig
 from refactron.core.models import CodeIssue, IssueCategory, IssueLevel
+
+if TYPE_CHECKING:
+    from refactron.llm.orchestrator import LLMOrchestrator
+
+logger = logging.getLogger(__name__)
+
+_AI_TRIAGE_DROP_THRESHOLD = 0.3
 
 
 class CodeSmellAnalyzer(BaseAnalyzer):
     """Detects common code smells and anti-patterns."""
+
+    def __init__(
+        self,
+        config: RefactronConfig,
+        orchestrator: Optional["LLMOrchestrator"] = None,
+    ) -> None:
+        """Initialize the analyzer.
+
+        Args:
+            config: Refactron configuration.
+            orchestrator: Optional LLMOrchestrator used for AI triage when
+                ``config.enable_ai_triage`` is ``True``.
+        """
+        super().__init__(config)
+        self.orchestrator = orchestrator
 
     @property
     def name(self) -> str:
         return "code_smells"
 
     def analyze(self, file_path: Path, source_code: str) -> List[CodeIssue]:
-        """
-        Analyze code for smells and anti-patterns.
+        """Analyze code for smells and anti-patterns.
 
         Args:
             file_path: Path to the file
             source_code: Source code content
 
         Returns:
-            List of detected code smell issues
+            List of detected code smell issues, filtered by AI triage when enabled.
         """
-        issues = []
+        issues: List[CodeIssue] = []
 
         try:
             tree = ast.parse(source_code)
@@ -42,16 +65,55 @@ class CodeSmellAnalyzer(BaseAnalyzer):
             issues.extend(self._check_repeated_code_blocks(tree, file_path))
 
         except SyntaxError as e:
-            issue = CodeIssue(
-                category=IssueCategory.CODE_SMELL,
-                level=IssueLevel.ERROR,
-                message=f"Syntax error: {str(e)}",
-                file_path=file_path,
-                line_number=getattr(e, "lineno", 1),
+            issues.append(
+                CodeIssue(
+                    category=IssueCategory.CODE_SMELL,
+                    level=IssueLevel.ERROR,
+                    message=f"Syntax error: {str(e)}",
+                    file_path=file_path,
+                    line_number=getattr(e, "lineno", 1),
+                )
             )
-            issues.append(issue)
+
+        if self.config.enable_ai_triage and self.orchestrator and issues:
+            issues = self._apply_ai_triage(issues, source_code)
 
         return issues
+
+    def _apply_ai_triage(
+        self, issues: List[CodeIssue], source_code: str
+    ) -> List[CodeIssue]:
+        """Send detected issues through batch LLM triage and drop false positives.
+
+        Any issue whose returned confidence score is below
+        ``_AI_TRIAGE_DROP_THRESHOLD`` is considered a false positive and removed
+        from the results.
+
+        Args:
+            issues: Issues detected by the static analysers.
+            source_code: Full source of the file being analysed.
+
+        Returns:
+            Filtered list of issues that passed the confidence threshold.
+        """
+        try:
+            scores = self.orchestrator.evaluate_issues_batch(issues, source_code)
+        except Exception as exc:
+            logger.warning("AI triage failed, returning all issues unfiltered: %s", exc)
+            return issues
+
+        kept: List[CodeIssue] = []
+        for issue, (issue_id, score) in zip(issues, scores.items()):
+            if score >= _AI_TRIAGE_DROP_THRESHOLD:
+                kept.append(issue)
+            else:
+                logger.debug(
+                    "AI triage suppressed issue '%s' (id=%s, score=%.2f)",
+                    issue.message,
+                    issue_id,
+                    score,
+                )
+        return kept
 
     def _check_too_many_parameters(self, tree: ast.AST, file_path: Path) -> List[CodeIssue]:
         """Check for functions with too many parameters."""

@@ -124,6 +124,9 @@ class RefactronConfig:
     enable_telemetry: bool = False  # Opt-in only
     telemetry_endpoint: Optional[str] = None  # For future remote submission
 
+    # AI triage settings
+    enable_ai_triage: bool = False  # Run batch LLM triage to suppress false-positive code smells
+
     # Pattern learning settings
     enable_pattern_learning: bool = True  # Master switch for pattern learning
     pattern_storage_dir: Optional[Path] = None  # Custom storage directory (None = default)
@@ -237,6 +240,7 @@ class RefactronConfig:
             "prometheus_port": self.prometheus_port,
             "enable_telemetry": self.enable_telemetry,
             "telemetry_endpoint": self.telemetry_endpoint,
+            "enable_ai_triage": self.enable_ai_triage,
             "enable_pattern_learning": self.enable_pattern_learning,
             "pattern_storage_dir": (
                 str(self.pattern_storage_dir) if self.pattern_storage_dir else None
