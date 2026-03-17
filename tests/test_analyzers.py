@@ -180,9 +180,9 @@ def test_ai_triage_returns_all_issues_on_orchestrator_exception(mock_orchestrato
     file_path = Path("test.py")
 
     # Establish a ground-truth baseline with AI triage completely off
-    baseline_issues = CodeSmellAnalyzer(
-        RefactronConfig(enable_ai_triage=False)
-    ).analyze(file_path, _SMELLY_CODE)
+    baseline_issues = CodeSmellAnalyzer(RefactronConfig(enable_ai_triage=False)).analyze(
+        file_path, _SMELLY_CODE
+    )
     assert len(baseline_issues) > 0, "fixture must produce at least one issue"
 
     # Now run with triage enabled but a crashing orchestrator

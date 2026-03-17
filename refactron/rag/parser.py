@@ -106,7 +106,13 @@ class CodeParser:
                         # Absolute last resort
                         PY_LANGUAGE = Language(lang, name="python")
 
-        self.parser = Parser(PY_LANGUAGE)
+        # tree-sitter 0.20.x: Parser() takes no arguments; language is set via
+        # set_language().  0.21+ accepts Parser(language) directly.
+        try:
+            self.parser = Parser(PY_LANGUAGE)
+        except TypeError:
+            self.parser = Parser()
+            self.parser.set_language(PY_LANGUAGE)
 
     def parse_file(self, file_path: Path) -> ParsedFile:
         """Parse a Python file.
@@ -121,6 +127,8 @@ class CodeParser:
             source_code = f.read()
 
         tree = self.parser.parse(source_code)
+        if tree is None:
+            raise ValueError("Parsing failed")
         root = tree.root_node
 
         # Extract module docstring

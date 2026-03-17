@@ -194,9 +194,7 @@ class Refactron:
                         "triage will be skipped: %s",
                         e,
                     )
-            self.analyzers.append(
-                CodeSmellAnalyzer(self.config, orchestrator=orchestrator)
-            )
+            self.analyzers.append(CodeSmellAnalyzer(self.config, orchestrator=orchestrator))
 
         if "security" in self.config.enabled_analyzers:
             self.analyzers.append(SecurityAnalyzer(self.config))

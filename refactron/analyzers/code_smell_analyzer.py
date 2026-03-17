@@ -109,9 +109,7 @@ class CodeSmellAnalyzer(BaseAnalyzer):
         id_parts.append(str(index))
         return ":".join(id_parts)
 
-    def _apply_ai_triage(
-        self, issues: List[CodeIssue], source_code: str
-    ) -> List[CodeIssue]:
+    def _apply_ai_triage(self, issues: List[CodeIssue], source_code: str) -> List[CodeIssue]:
         """Send detected issues through batch LLM triage and drop false positives.
 
         Any issue whose returned confidence score is below
