@@ -63,89 +63,115 @@ class CodeParser:
         self.parser = self._build_parser(PY_LANGUAGE)
 
     @staticmethod
+    def _tree_sitter_minor_version() -> int:
+        """Return the installed tree-sitter minor version (e.g. 20, 21, 22).
+
+        Uses ``importlib.metadata`` which is part of the stdlib since Python 3.8
+        and is always accurate for the active virtual environment.
+        """
+        import importlib.metadata
+
+        try:
+            raw = importlib.metadata.version("tree-sitter")
+            # raw is e.g. "0.21.0" or "0.22.6" or "0.25.2"
+            parts = raw.split(".")
+            return int(parts[1]) if len(parts) >= 2 else 0
+        except Exception:
+            return 0
+
+    @staticmethod
     def _build_language() -> "Language":
-        """Construct a tree-sitter Language object across all supported API versions.
+        """Construct a tree-sitter Language object for the installed API version.
 
-        tree-sitter has gone through three distinct APIs:
-        - 0.20.x: ``Language(path_to_so, "python")`` — path-based, two-argument form
-        - 0.21.x: ``Language(capsule, "python")`` — capsule + name, two-argument form
-        - 0.22+:  ``Language(capsule)`` — single-argument form (name dropped)
+        tree-sitter changed its public API across three version ranges:
 
-        ``tspython.language()`` always returns a PyCapsule on every version, but
-        what the ``Language`` constructor accepts with that capsule changed across
-        releases.  We probe from newest to oldest so that each version gets its
-        correct construction path without triggering deprecation warnings
-        unnecessarily.
+        - 0.20.x  ``Language(path_to_so, "python")``  — shared-library path + name
+        - 0.21.x  ``Language(capsule, "python")``      — capsule + name
+        - 0.22+   ``Language(capsule)``                — capsule only (name dropped)
+
+        We read the actual installed version via ``importlib.metadata`` and
+        dispatch directly to the correct form, avoiding any silent-failure risk
+        from blind try/except probing.
         """
         import os
         import platform
 
         lang = tspython.language()
 
-        # Already a Language object (some binding variants)
+        # Already a fully constructed Language object (rare binding variant)
         if isinstance(lang, Language):
             return lang
 
-        # tree-sitter 0.22+: Language(capsule) — single argument
-        try:
-            candidate = Language(lang)
-            # Verify the object is usable before returning it
-            _ = candidate.name  # raises AttributeError on broken instances
-            return candidate
-        except (TypeError, AttributeError):
-            pass
+        minor = CodeParser._tree_sitter_minor_version()
 
-        # tree-sitter 0.21.x: Language(capsule, "python")
-        try:
-            candidate = Language(lang, "python")
-            _ = candidate.name
-            return candidate
-        except (TypeError, AttributeError):
-            pass
+        # ── 0.22 and newer ──────────────────────────────────────────────────
+        if minor >= 22:
+            return Language(lang)
 
-        # tree-sitter 0.20.x: Language(path_to_shared_library, "python")
-        # tspython ships a compiled .so/.dll/.dylib alongside its __init__.py
+        # ── 0.21.x ──────────────────────────────────────────────────────────
+        if minor == 21:
+            try:
+                return Language(lang, "python")
+            except TypeError:
+                # Some 0.21 builds already dropped the name argument
+                return Language(lang)
+
+        # ── 0.20.x ──────────────────────────────────────────────────────────
+        # Language() requires the path to the compiled shared library
         pkg_dir = os.path.dirname(tspython.__file__)
         system = platform.system()
         ext = ".dll" if system == "Windows" else (".dylib" if system == "Darwin" else ".so")
 
-        for fname in os.listdir(pkg_dir):
+        for fname in sorted(os.listdir(pkg_dir)):
             if fname.endswith(ext):
                 lib_path = os.path.join(pkg_dir, fname)
                 try:
-                    candidate = Language(lib_path, "python")
-                    _ = candidate.name
-                    return candidate
-                except (TypeError, AttributeError, OSError):
+                    return Language(lib_path, "python")
+                except (TypeError, OSError):
                     continue
 
+        # Unknown / future version — try both forms as a last resort
+        try:
+            return Language(lang)
+        except TypeError:
+            pass
+        try:
+            return Language(lang, "python")
+        except TypeError:
+            pass
+
         raise RuntimeError(
-            "Could not construct a tree-sitter Language for Python. "
-            "Try upgrading: pip install --upgrade tree-sitter tree-sitter-python"
+            f"Could not construct a tree-sitter Language for Python "
+            f"(tree-sitter minor version: {minor}). "
+            "Try: pip install --upgrade tree-sitter tree-sitter-python"
         )
 
     @staticmethod
     def _build_parser(language: "Language") -> "Parser":
         """Construct a tree-sitter Parser compatible with the installed API version.
 
-        - 0.20.x: ``Parser()`` then ``parser.set_language(language)``
-        - 0.21+:  ``Parser(language)``
+        - 0.20.x  ``Parser()`` then ``parser.set_language(language)``
+        - 0.21+   ``Parser(language)``
         """
-        try:
-            parser = Parser(language)
-            # Sanity-check: a healthy parser must be able to parse trivial code
-            if parser.parse(b"x = 1") is None:
-                raise ValueError("parser.parse returned None after construction")
-            return parser
-        except (TypeError, ValueError):
-            parser = Parser()
-            parser.set_language(language)
-            if parser.parse(b"x = 1") is None:
-                raise RuntimeError(
-                    "tree-sitter Parser could not be initialised. "
-                    "Try upgrading: pip install --upgrade tree-sitter tree-sitter-python"
-                )
-            return parser
+        minor = CodeParser._tree_sitter_minor_version()
+
+        if minor >= 21:
+            try:
+                parser = Parser(language)
+                if parser.parse(b"x = 1") is not None:
+                    return parser
+            except TypeError:
+                pass  # fall through to set_language path
+
+        # 0.20.x and any fallback path
+        parser = Parser()
+        parser.set_language(language)
+        if parser.parse(b"x = 1") is None:
+            raise RuntimeError(
+                "tree-sitter Parser could not be initialised. "
+                "Try: pip install --upgrade tree-sitter tree-sitter-python"
+            )
+        return parser
 
     def parse_file(self, file_path: Path) -> ParsedFile:
         """Parse a Python file.

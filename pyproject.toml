@@ -37,8 +37,11 @@ dependencies = [
     "astroid>=3.0.0",
     # RAG Infrastructure
     "chromadb>=0.4.22",
-    "tree-sitter>=0.20.4",
-    "tree-sitter-python>=0.20.4",
+    # tree-sitter 0.21.3 is the newest release that supports Python 3.8–3.12.
+    # 0.22+ requires Python >=3.9 and 0.23+ requires >=3.9/3.10 depending on
+    # the wheel; pinning both here avoids version-skew failures in CI.
+    "tree-sitter>=0.21.3,<0.22",
+    "tree-sitter-python>=0.21.0,<0.22",
     "sentence-transformers>=2.5.1",
     # LLM Integration (Free Cloud APIs)
     "groq>=0.4.0",  # Free cloud LLM (Llama 3, Mixtral)
