@@ -172,21 +172,6 @@ class Refactron:
         else:
             logger.debug("Pattern learning is disabled in configuration")
 
-        # Initialize LLMOrchestrator for AI triage if the feature is enabled
-        self.orchestrator = None
-        if self.config.enable_ai_triage:
-            try:
-                from refactron.llm.orchestrator import LLMOrchestrator
-
-                self.orchestrator = LLMOrchestrator()
-                logger.debug("LLMOrchestrator initialized for AI triage")
-            except Exception as e:
-                logger.warning(
-                    "Failed to initialize LLMOrchestrator for AI triage; "
-                    "triage will be skipped: %s",
-                    e,
-                )
-
         self._initialize_analyzers()
         self._initialize_refactorers()
 
@@ -196,8 +181,21 @@ class Refactron:
             self.analyzers.append(ComplexityAnalyzer(self.config))
 
         if "code_smells" in self.config.enabled_analyzers:
+            orchestrator = None
+            if self.config.enable_ai_triage:
+                try:
+                    from refactron.llm.orchestrator import LLMOrchestrator
+
+                    orchestrator = LLMOrchestrator()
+                    logger.debug("LLMOrchestrator initialized for code-smell AI triage")
+                except Exception as e:
+                    logger.warning(
+                        "Failed to initialize LLMOrchestrator for AI triage; "
+                        "triage will be skipped: %s",
+                        e,
+                    )
             self.analyzers.append(
-                CodeSmellAnalyzer(self.config, orchestrator=self.orchestrator)
+                CodeSmellAnalyzer(self.config, orchestrator=orchestrator)
             )
 
         if "security" in self.config.enabled_analyzers:
