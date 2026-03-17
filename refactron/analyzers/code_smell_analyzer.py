@@ -76,9 +76,38 @@ class CodeSmellAnalyzer(BaseAnalyzer):
             )
 
         if self.config.enable_ai_triage and self.orchestrator and issues:
-            issues = self._apply_ai_triage(issues, source_code)
+            # ERROR-level issues (e.g. SyntaxError) are critical parse failures
+            # and must never be suppressed by AI triage.
+            error_issues = [i for i in issues if i.level == IssueLevel.ERROR]
+            triageable = [i for i in issues if i.level != IssueLevel.ERROR]
+
+            if triageable:
+                triageable = self._apply_ai_triage(triageable, source_code)
+
+            issues = error_issues + triageable
 
         return issues
+
+    @staticmethod
+    def _build_issue_id(issue: CodeIssue, index: int) -> str:
+        """Reconstruct the stable issue ID used by ``evaluate_issues_batch``.
+
+        The formula mirrors ``LLMOrchestrator.evaluate_issues_batch`` exactly so
+        that score look-ups by ID are always correct.
+
+        Args:
+            issue: The code issue.
+            index: Zero-based position of the issue in the list passed to triage.
+
+        Returns:
+            String key in the form ``"<rule_id_or_issue>:<line>:<index>"``.
+        """
+        base_id = issue.rule_id or "issue"
+        id_parts = [str(base_id)]
+        if issue.line_number is not None:
+            id_parts.append(str(issue.line_number))
+        id_parts.append(str(index))
+        return ":".join(id_parts)
 
     def _apply_ai_triage(
         self, issues: List[CodeIssue], source_code: str
@@ -87,10 +116,11 @@ class CodeSmellAnalyzer(BaseAnalyzer):
 
         Any issue whose returned confidence score is below
         ``_AI_TRIAGE_DROP_THRESHOLD`` is considered a false positive and removed
-        from the results.
+        from the results. Issues for which the LLM returns no score are kept
+        to avoid silent data loss.
 
         Args:
-            issues: Issues detected by the static analysers.
+            issues: Non-error issues detected by the static analysers.
             source_code: Full source of the file being analysed.
 
         Returns:
@@ -103,8 +133,18 @@ class CodeSmellAnalyzer(BaseAnalyzer):
             return issues
 
         kept: List[CodeIssue] = []
-        for issue, (issue_id, score) in zip(issues, scores.items()):
-            if score >= _AI_TRIAGE_DROP_THRESHOLD:
+        for index, issue in enumerate(issues):
+            issue_id = self._build_issue_id(issue, index)
+            score = scores.get(issue_id)
+
+            if score is None:
+                logger.warning(
+                    "AI triage returned no score for issue '%s' (id=%s); keeping it",
+                    issue.message,
+                    issue_id,
+                )
+                kept.append(issue)
+            elif score >= _AI_TRIAGE_DROP_THRESHOLD:
                 kept.append(issue)
             else:
                 logger.debug(

@@ -49,7 +49,6 @@ Frontend touchpoint:
 From repo root:
 
 ```powershell
-cd "E:\Refactron Lib\Refactron_lib"
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip

@@ -8,6 +8,7 @@ import pytest
 from refactron.analyzers.code_smell_analyzer import CodeSmellAnalyzer
 from refactron.analyzers.complexity_analyzer import ComplexityAnalyzer
 from refactron.core.config import RefactronConfig
+from refactron.core.models import IssueLevel
 from refactron.llm.orchestrator import LLMOrchestrator
 
 
@@ -99,17 +100,26 @@ def test_ai_triage_disabled_by_default(mock_orchestrator) -> None:
     assert len(issues) > 0
 
 
+def _make_scores(issues: list, confidence_fn) -> dict:
+    """Build a scores dict using the same ID formula as _build_issue_id."""
+    return {
+        CodeSmellAnalyzer._build_issue_id(issue, i): confidence_fn(i)
+        for i, issue in enumerate(issues)
+    }
+
+
 def test_ai_triage_filters_low_confidence_issues(mock_orchestrator) -> None:
     """Issues with confidence < 0.3 are dropped when AI triage is enabled."""
     config = RefactronConfig(enable_ai_triage=True)
     analyzer = CodeSmellAnalyzer(config, orchestrator=mock_orchestrator)
 
-    # Run once without triage to find out how many issues are detected
+    # Run once without triage to determine the triageable (non-ERROR) issues
     raw_issues = CodeSmellAnalyzer(RefactronConfig()).analyze(Path("test.py"), _SMELLY_CODE)
-    assert len(raw_issues) >= 2, "fixture must produce at least 2 issues"
+    triageable = [i for i in raw_issues if i.level != IssueLevel.ERROR]
+    assert len(triageable) >= 2, "fixture must produce at least 2 triageable issues"
 
-    # Assign: first issue is a true positive (high confidence), rest are false positives
-    scores = {f"key_{i}": (0.9 if i == 0 else 0.1) for i in range(len(raw_issues))}
+    # First issue is a true positive (high confidence), rest are false positives
+    scores = _make_scores(triageable, lambda i: 0.9 if i == 0 else 0.1)
     mock_orchestrator.evaluate_issues_batch.return_value = scores
 
     filtered = analyzer.analyze(Path("test.py"), _SMELLY_CODE)
@@ -125,10 +135,10 @@ def test_ai_triage_keeps_all_high_confidence_issues(mock_orchestrator) -> None:
     analyzer = CodeSmellAnalyzer(config, orchestrator=mock_orchestrator)
 
     raw_issues = CodeSmellAnalyzer(RefactronConfig()).analyze(Path("test.py"), _SMELLY_CODE)
-    assert len(raw_issues) >= 1
+    triageable = [i for i in raw_issues if i.level != IssueLevel.ERROR]
+    assert len(triageable) >= 1
 
-    # All issues score above threshold
-    scores = {f"key_{i}": 0.85 for i in range(len(raw_issues))}
+    scores = _make_scores(triageable, lambda i: 0.85)
     mock_orchestrator.evaluate_issues_batch.return_value = scores
 
     filtered = analyzer.analyze(Path("test.py"), _SMELLY_CODE)
@@ -142,7 +152,8 @@ def test_ai_triage_passes_source_code_to_orchestrator(mock_orchestrator) -> None
     analyzer = CodeSmellAnalyzer(config, orchestrator=mock_orchestrator)
 
     raw_issues = CodeSmellAnalyzer(RefactronConfig()).analyze(Path("test.py"), _SMELLY_CODE)
-    scores = {f"key_{i}": 0.9 for i in range(len(raw_issues))}
+    triageable = [i for i in raw_issues if i.level != IssueLevel.ERROR]
+    scores = _make_scores(triageable, lambda i: 0.9)
     mock_orchestrator.evaluate_issues_batch.return_value = scores
 
     analyzer.analyze(Path("test.py"), _SMELLY_CODE)
@@ -165,12 +176,26 @@ def test_ai_triage_skipped_when_no_issues(mock_orchestrator) -> None:
 
 
 def test_ai_triage_returns_all_issues_on_orchestrator_exception(mock_orchestrator) -> None:
-    """If the orchestrator raises, all detected issues are returned unfiltered."""
+    """If the orchestrator raises, every issue returned must match the untriaged baseline."""
+    file_path = Path("test.py")
+
+    # Establish a ground-truth baseline with AI triage completely off
+    baseline_issues = CodeSmellAnalyzer(
+        RefactronConfig(enable_ai_triage=False)
+    ).analyze(file_path, _SMELLY_CODE)
+    assert len(baseline_issues) > 0, "fixture must produce at least one issue"
+
+    # Now run with triage enabled but a crashing orchestrator
+    mock_orchestrator.evaluate_issues_batch.side_effect = RuntimeError("LLM unavailable")
     config = RefactronConfig(enable_ai_triage=True)
     analyzer = CodeSmellAnalyzer(config, orchestrator=mock_orchestrator)
-    mock_orchestrator.evaluate_issues_batch.side_effect = RuntimeError("LLM unavailable")
 
-    issues = analyzer.analyze(Path("test.py"), _SMELLY_CODE)
+    fallback_issues = analyzer.analyze(file_path, _SMELLY_CODE)
 
-    # Should not raise and should still return everything the static analysis found
-    assert len(issues) > 0
+    # Count must be identical — nothing was filtered
+    assert len(fallback_issues) == len(baseline_issues)
+
+    # Contents must be identical — same messages, same lines, same rule IDs
+    baseline_keys = {(i.message, i.line_number, i.rule_id) for i in baseline_issues}
+    fallback_keys = {(i.message, i.line_number, i.rule_id) for i in fallback_issues}
+    assert fallback_keys == baseline_keys
