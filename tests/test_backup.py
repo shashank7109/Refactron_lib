@@ -6,10 +6,11 @@ import stat
 import subprocess
 import tempfile
 from pathlib import Path
-from refactron.core.backup import BackupManager, BackupRollbackSystem, GitIntegration
-from refactron.core.credentials import RefactronCredentials
 
 import pytest
+
+from refactron.core.backup import BackupManager, BackupRollbackSystem, GitIntegration
+from refactron.core.credentials import RefactronCredentials
 
 
 def _rmtree_force(path: Path) -> None:
