@@ -61,17 +61,12 @@ class CodeParser:
                 "Install with: pip install tree-sitter tree-sitter-python"
             )
 
-<<<<<<< HEAD
         language = CodeParser._build_language()
-=======
-        language = CodeParser._get_language()
->>>>>>> 9be17278e3d16ccac8d36ba4cf1e8064ce909bb9
         self.parser = CodeParser._build_parser(language)
 
     @staticmethod
     def _tree_sitter_minor_version() -> int:
         """Return the minor version of the installed tree-sitter package."""
-<<<<<<< HEAD
         import tree_sitter
 
         version = getattr(tree_sitter, "__version__", "0.20.0")
@@ -94,53 +89,20 @@ class CodeParser:
         minor = CodeParser._tree_sitter_minor_version()
 
         # 0.21.x: tspython.language() may return a raw int (C pointer).
-=======
-        try:
-            from importlib.metadata import version as pkg_version
-
-            ver = pkg_version("tree-sitter")
-            return int(ver.split(".")[1])
-        except Exception:
-            return 0
-
-    @staticmethod
-    def _get_language() -> "Language":
-        """Build a tree-sitter Language object for Python.
-
-        Handles API differences across tree-sitter / tree-sitter-python
-        versions (0.20.x through 0.23+).
-        """
-        lang = tspython.language()
-
-        # 0.22+ / newer: tspython.language() already returns a Language object
-        if isinstance(lang, Language):
-            return lang
-
-        # 0.21.x: tspython.language() returns a raw int (C pointer)
->>>>>>> 9be17278e3d16ccac8d36ba4cf1e8064ce909bb9
         if isinstance(lang, int):
             try:
                 return Language(lang, "python")
             except TypeError:
                 pass
 
-<<<<<<< HEAD
         # 0.22+: PyCapsule — single-argument Language constructor.
-=======
-        # 0.22+ with PyCapsule
-        minor = CodeParser._tree_sitter_minor_version()
->>>>>>> 9be17278e3d16ccac8d36ba4cf1e8064ce909bb9
         if minor >= 22:
             try:
                 return Language(lang)
             except TypeError:
                 pass
 
-<<<<<<< HEAD
         # 0.20.x: Language needs path to the compiled grammar shared library.
-=======
-        # 0.20.x fallback: find the compiled shared library on disk
->>>>>>> 9be17278e3d16ccac8d36ba4cf1e8064ce909bb9
         pkg_dir = os.path.dirname(tspython.__file__)
         system = platform.system()
         ext = ".dll" if system == "Windows" else (".dylib" if system == "Darwin" else ".so")
@@ -150,7 +112,6 @@ class CodeParser:
                 lib_path = os.path.join(pkg_dir, fname)
                 try:
                     return Language(lib_path, "python")
-<<<<<<< HEAD
                 except (TypeError, OSError, ValueError):
                     continue
 
@@ -166,13 +127,6 @@ class CodeParser:
 
         raise RuntimeError(
             "Could not construct tree-sitter Language for Python. "
-=======
-                except Exception:
-                    continue
-
-        raise RuntimeError(
-            "Could not initialise tree-sitter Python language. "
->>>>>>> 9be17278e3d16ccac8d36ba4cf1e8064ce909bb9
             "Try: pip install --upgrade tree-sitter tree-sitter-python"
         )
 
