@@ -103,14 +103,18 @@ jobs:
 
             // Add labels if any detected
             if (labels.length > 0) {
-              await github.rest.issues.addLabels({
-                owner,
-                repo,
-                issue_number: number,
-                labels: labels
-              });
-
-              console.log(`Added ${labels.length} labels: ${labels.join(', ')}`);
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: number,
+                  labels: labels
+                });
+                console.log(`Added ${labels.length} labels: ${labels.join(', ')}`);
+              } catch (error) {
+                console.log(`⚠️ Could not add labels: ${error.message}`);
+                console.log('Ensure the workflow has write permissions (Settings → Actions → General → Workflow permissions).');
+              }
             } else {
               console.log('No labels detected');
             }
@@ -218,15 +222,19 @@ jobs:
 
             // Add labels
             if (labels.length > 0) {
-              await github.rest.issues.addLabels({
-                owner,
-                repo,
-                issue_number: number,
-                labels: labels
-              });
-
-              console.log(`Added ${labels.length} labels: ${labels.join(', ')}`);
-              console.log(`PR size: ${totalChanges} changes (${additions} additions, ${deletions} deletions)`);
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: number,
+                  labels: labels
+                });
+                console.log(`Added ${labels.length} labels: ${labels.join(', ')}`);
+                console.log(`PR size: ${totalChanges} changes (${additions} additions, ${deletions} deletions)`);
+              } catch (error) {
+                console.log(`⚠️ Could not add labels: ${error.message}`);
+                console.log('Ensure the workflow has write permissions (Settings → Actions → General → Workflow permissions).');
+              }
             } else {
               console.log('No labels detected');
             }
