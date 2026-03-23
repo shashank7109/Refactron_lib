@@ -90,35 +90,33 @@ class TestStructuredLogger:
         """Test logger initialization with defaults."""
         with TemporaryDirectory() as tmpdir:
             log_file = Path(tmpdir) / "test.log"
-            logger = StructuredLogger(
+            with StructuredLogger(
                 name="test",
                 level="INFO",
                 log_file=log_file,
                 enable_console=False,
                 enable_file=True,
-            )
-
-            assert logger.name == "test"
-            assert logger.level == logging.INFO
-            assert logger.log_file == log_file
+            ) as logger:
+                assert logger.name == "test"
+                assert logger.level == logging.INFO
+                assert logger.log_file == log_file
 
     def test_json_logging(self):
         """Test JSON format logging to file."""
         with TemporaryDirectory() as tmpdir:
             log_file = Path(tmpdir) / "test.log"
-            logger = StructuredLogger(
+            with StructuredLogger(
                 name="test",
                 level="INFO",
                 log_file=log_file,
                 log_format="json",
                 enable_console=False,
                 enable_file=True,
-            )
+            ) as logger:
+                logger.get_logger().info("Test message")
 
-            logger.get_logger().info("Test message")
-
-            # Read and verify log file
-            with open(log_file, "r") as f:
+            # Read and verify log file (handler closed above)
+            with open(log_file, "r", encoding="utf-8") as f:
                 log_line = f.read().strip()
                 log_data = json.loads(log_line)
 
@@ -129,19 +127,18 @@ class TestStructuredLogger:
         """Test text format logging to file."""
         with TemporaryDirectory() as tmpdir:
             log_file = Path(tmpdir) / "test.log"
-            logger = StructuredLogger(
+            with StructuredLogger(
                 name="test",
                 level="INFO",
                 log_file=log_file,
                 log_format="text",
                 enable_console=False,
                 enable_file=True,
-            )
+            ) as logger:
+                logger.get_logger().info("Test text message")
 
-            logger.get_logger().info("Test text message")
-
-            # Read and verify log file
-            with open(log_file, "r") as f:
+            # Read and verify log file (handler closed above)
+            with open(log_file, "r", encoding="utf-8") as f:
                 log_line = f.read().strip()
 
             assert "Test text message" in log_line
@@ -154,7 +151,7 @@ class TestStructuredLogger:
             max_bytes = 1024
             backup_count = 3
 
-            logger = StructuredLogger(
+            with StructuredLogger(
                 name="test",
                 level="INFO",
                 log_file=log_file,
@@ -162,18 +159,17 @@ class TestStructuredLogger:
                 backup_count=backup_count,
                 enable_console=False,
                 enable_file=True,
-            )
+            ) as logger:
+                # Verify handler is configured with rotation
+                file_handler = None
+                for handler in logger.get_logger().handlers:
+                    if hasattr(handler, "maxBytes"):
+                        file_handler = handler
+                        break
 
-            # Verify handler is configured with rotation
-            file_handler = None
-            for handler in logger.get_logger().handlers:
-                if hasattr(handler, "maxBytes"):
-                    file_handler = handler
-                    break
-
-            assert file_handler is not None
-            assert file_handler.maxBytes == max_bytes
-            assert file_handler.backupCount == backup_count
+                assert file_handler is not None
+                assert file_handler.maxBytes == max_bytes
+                assert file_handler.backupCount == backup_count
 
     def test_log_levels(self):
         """Test different log levels."""
@@ -181,21 +177,20 @@ class TestStructuredLogger:
             log_file = Path(tmpdir) / "test.log"
 
             # Test with WARNING level
-            logger = StructuredLogger(
+            with StructuredLogger(
                 name="test",
                 level="WARNING",
                 log_file=log_file,
                 log_format="json",
                 enable_console=False,
                 enable_file=True,
-            )
+            ) as logger:
+                logger.get_logger().info("Info message")
+                logger.get_logger().warning("Warning message")
+                logger.get_logger().error("Error message")
 
-            logger.get_logger().info("Info message")
-            logger.get_logger().warning("Warning message")
-            logger.get_logger().error("Error message")
-
-            # Read log file
-            with open(log_file, "r") as f:
+            # Read log file (handler closed above)
+            with open(log_file, "r", encoding="utf-8") as f:
                 lines = f.readlines()
 
             # Only WARNING and ERROR should be logged
@@ -242,14 +237,13 @@ def test_setup_logging():
     """Test setup_logging convenience function."""
     with TemporaryDirectory() as tmpdir:
         log_file = Path(tmpdir) / "test.log"
-        logger = setup_logging(
+        with setup_logging(
             level="DEBUG",
             log_file=log_file,
             log_format="json",
             enable_console=False,
             enable_file=True,
-        )
-
-        assert isinstance(logger, StructuredLogger)
-        assert logger.level == logging.DEBUG
-        assert logger.log_file == log_file
+        ) as logger:
+            assert isinstance(logger, StructuredLogger)
+            assert logger.level == logging.DEBUG
+            assert logger.log_file == log_file

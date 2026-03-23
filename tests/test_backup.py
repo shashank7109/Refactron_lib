@@ -1,14 +1,30 @@
 """Tests for the backup and rollback system."""
 
+import os
 import shutil
+import stat
 import subprocess
 import tempfile
 from pathlib import Path
+from refactron.core.backup import BackupManager, BackupRollbackSystem, GitIntegration
+from refactron.core.credentials import RefactronCredentials
 
 import pytest
 
-from refactron.core.backup import BackupManager, BackupRollbackSystem, GitIntegration
-from refactron.core.credentials import RefactronCredentials
+
+def _rmtree_force(path: Path) -> None:
+    """Remove a directory tree, clearing read-only bits first (needed on Windows).
+
+    Git marks object files read-only; plain ``shutil.rmtree`` raises
+    ``PermissionError: [WinError 5]`` when it tries to delete them.
+    The ``onexc`` / ``onerror`` callback clears the offending bit and retries.
+    """
+
+    def _handle_readonly(func, fpath, exc_info):  # type: ignore[no-untyped-def]
+        os.chmod(fpath, stat.S_IWRITE)
+        func(fpath)
+
+    shutil.rmtree(path, onerror=_handle_readonly)
 
 
 @pytest.fixture(autouse=True)
@@ -329,7 +345,7 @@ class TestGitIntegrationWithRepo:
         )
         yield temp
         if temp.exists():
-            shutil.rmtree(temp)
+            _rmtree_force(temp)
 
     def test_is_git_repo_true(self, git_repo):
         """Test is_git_repo returns True for actual repo."""
@@ -516,11 +532,18 @@ class TestCLIRollback:
         assert result.exit_code == 0
         assert "Rollback refactoring changes" in result.output
 
-    def test_rollback_list_empty(self):
+    def test_rollback_list_empty(self, monkeypatch):
         """Test rollback --list with no sessions."""
+        from unittest.mock import MagicMock
+
         from click.testing import CliRunner
 
+        import refactron.cli.refactor as refactor_mod
         from refactron.cli import main
+
+        mock_system = MagicMock()
+        mock_system.list_sessions.return_value = []
+        monkeypatch.setattr(refactor_mod, "BackupRollbackSystem", lambda *a, **kw: mock_system)
 
         runner = CliRunner()
         with runner.isolated_filesystem():
@@ -529,11 +552,18 @@ class TestCLIRollback:
         assert result.exit_code == 0
         assert "No backup sessions found" in result.output
 
-    def test_rollback_no_sessions(self):
+    def test_rollback_no_sessions(self, monkeypatch):
         """Test rollback with no sessions."""
+        from unittest.mock import MagicMock
+
         from click.testing import CliRunner
 
+        import refactron.cli.refactor as refactor_mod
         from refactron.cli import main
+
+        mock_system = MagicMock()
+        mock_system.list_sessions.return_value = []
+        monkeypatch.setattr(refactor_mod, "BackupRollbackSystem", lambda *a, **kw: mock_system)
 
         runner = CliRunner()
         with runner.isolated_filesystem():
@@ -542,11 +572,19 @@ class TestCLIRollback:
         assert result.exit_code == 0
         assert "No backup sessions found" in result.output
 
-    def test_rollback_nonexistent_session(self):
+    def test_rollback_nonexistent_session(self, monkeypatch):
         """Test rollback with nonexistent session."""
+        from unittest.mock import MagicMock
+
         from click.testing import CliRunner
 
+        import refactron.cli.refactor as refactor_mod
         from refactron.cli import main
+
+        mock_system = MagicMock()
+        mock_system.list_sessions.return_value = []
+        mock_system.backup_manager.get_session.return_value = None
+        monkeypatch.setattr(refactor_mod, "BackupRollbackSystem", lambda *a, **kw: mock_system)
 
         runner = CliRunner()
         with runner.isolated_filesystem():

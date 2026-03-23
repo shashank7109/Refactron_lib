@@ -139,6 +139,27 @@ class StructuredLogger:
         """
         return self.logger
 
+    def close(self) -> None:
+        """Close and remove all handlers.
+
+        On Windows, file handlers hold an exclusive lock on the log file.
+        Calling this method before deleting the log directory (e.g. in
+        tests that use ``tempfile.TemporaryDirectory``) prevents the
+        ``PermissionError: [WinError 32]`` raised by ``shutil.rmtree``.
+        """
+        for handler in list(self.logger.handlers):
+            try:
+                handler.close()
+            except Exception:
+                pass
+            self.logger.removeHandler(handler)
+
+    def __enter__(self) -> "StructuredLogger":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
     def log_with_context(
         self, level: str, message: str, extra_data: Optional[Dict[str, Any]] = None
     ) -> None:

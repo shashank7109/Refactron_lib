@@ -104,17 +104,14 @@ class CodeParser:
 
         minor = CodeParser._tree_sitter_minor_version()
 
-        # ── 0.22 and newer ──────────────────────────────────────────────────
+        # ── 0.21.x: tspython.language() returns a raw int C pointer ─────────
+        # Language.__init__(self, ptr: int, name: str) is the 0.21 signature.
+        if isinstance(lang, int):
+            return Language(lang, "python")
+
+        # ── 0.22 and newer: tspython.language() returns a PyCapsule ─────────
         if minor >= 22:
             return Language(lang)
-
-        # ── 0.21.x ──────────────────────────────────────────────────────────
-        if minor == 21:
-            try:
-                return Language(lang, "python")
-            except TypeError:
-                # Some 0.21 builds already dropped the name argument
-                return Language(lang)
 
         # ── 0.20.x ──────────────────────────────────────────────────────────
         # Language() requires the path to the compiled shared library
@@ -147,31 +144,57 @@ class CodeParser:
         )
 
     @staticmethod
+    def _parser_works(parser: "Parser") -> bool:
+        """Return True if the parser can successfully parse trivial Python code.
+
+        On tree-sitter 0.21.x, ``parse()`` raises ``ValueError`` for a parser
+        that has no language set; on 0.22+ it returns ``None``.  We handle both.
+        """
+        try:
+            result = parser.parse(b"x = 1")
+            return result is not None
+        except (ValueError, RuntimeError):
+            return False
+
+    @staticmethod
     def _build_parser(language: "Language") -> "Parser":
         """Construct a tree-sitter Parser compatible with the installed API version.
 
+        API history:
         - 0.20.x  ``Parser()`` then ``parser.set_language(language)``
-        - 0.21+   ``Parser(language)``
+        - 0.21.x  ``Parser()`` then ``parser.set_language(language)``
+          (``Parser(language)`` raises ``TypeError`` — no positional args)
+        - 0.22+   ``Parser(language)`` — language passed to constructor directly
+
+        On 0.21.x ``parser.parse()`` raises ``ValueError`` instead of returning
+        ``None`` when called on a parser with no language set, so both behaviours
+        are handled in ``_parser_works()``.
         """
         minor = CodeParser._tree_sitter_minor_version()
 
-        if minor >= 21:
+        # 0.22+ accepts Language in the constructor
+        if minor >= 22:
             try:
                 parser = Parser(language)
-                if parser.parse(b"x = 1") is not None:
+                if CodeParser._parser_works(parser):
                     return parser
             except TypeError:
-                pass  # fall through to set_language path
+                pass  # unexpected; fall through to set_language path
 
-        # 0.20.x and any fallback path
-        parser = Parser()
-        parser.set_language(language)
-        if parser.parse(b"x = 1") is None:
-            raise RuntimeError(
-                "tree-sitter Parser could not be initialised. "
-                "Try: pip install --upgrade tree-sitter tree-sitter-python"
-            )
-        return parser
+        # 0.20.x and 0.21.x: no-arg constructor + set_language()
+        try:
+            parser = Parser()
+            parser.set_language(language)
+            if CodeParser._parser_works(parser):
+                return parser
+        except (TypeError, AttributeError):
+            pass
+
+        raise RuntimeError(
+            f"tree-sitter Parser could not be initialised "
+            f"(tree-sitter minor version: {CodeParser._tree_sitter_minor_version()}). "
+            "Try: pip install --upgrade tree-sitter tree-sitter-python"
+        )
 
     def parse_file(self, file_path: Path) -> ParsedFile:
         """Parse a Python file.
@@ -185,7 +208,13 @@ class CodeParser:
         with open(file_path, "rb") as f:
             source_code = f.read()
 
-        tree = self.parser.parse(source_code)
+        # tree-sitter 0.22+ returns None on failure; 0.21.x raises ValueError.
+        # We normalise both to a single ValueError with an informative message.
+        try:
+            tree = self.parser.parse(source_code)
+        except (ValueError, RuntimeError) as exc:
+            raise ValueError(f"Parsing failed for file {file_path}: {exc}") from exc
+
         if tree is None:
             raise ValueError(
                 f"Parsing failed for file {file_path}. "

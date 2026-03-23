@@ -7,7 +7,7 @@ import platform
 import random
 import sys
 import time
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import click
 from rich import box
@@ -20,9 +20,12 @@ from rich.table import Table
 from rich.text import Text
 from rich.theme import Theme
 
-from refactron import Refactron, __version__
+from refactron import __version__
 from refactron.core.analysis_result import AnalysisResult
 from refactron.core.refactor_result import RefactorResult
+
+if TYPE_CHECKING:
+    from refactron import Refactron
 
 # Custom theme for a premium, modern look
 THEME = Theme(
@@ -250,7 +253,7 @@ def _print_refactor_messages(summary: dict, preview: bool) -> None:
         console.print("\n[success]Refactoring completed! Don't forget to test your code.[/success]")
 
 
-def _collect_feedback_interactive(refactron: Refactron, result: RefactorResult) -> None:
+def _collect_feedback_interactive(refactron: "Refactron", result: RefactorResult) -> None:
     """
     Collect feedback from user interactively for each refactoring operation.
 
@@ -301,7 +304,7 @@ def _collect_feedback_interactive(refactron: Refactron, result: RefactorResult) 
     console.print("\n[success]Thank you for your feedback![/success]")
 
 
-def _record_applied_operations(refactron: Refactron, result: RefactorResult) -> None:
+def _record_applied_operations(refactron: "Refactron", result: RefactorResult) -> None:
     """
     Automatically record all operations as accepted when --apply is used.
 

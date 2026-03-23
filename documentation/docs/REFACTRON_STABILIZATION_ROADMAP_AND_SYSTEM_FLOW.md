@@ -21,6 +21,8 @@ Core package entrypoint is:
 
 ## 2) High-Level Architecture
 
+
+
 Main directories:
 
 - `refactron/core/` -> orchestration, config, models, results, auth credentials, backups, metrics

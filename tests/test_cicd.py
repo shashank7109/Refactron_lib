@@ -302,7 +302,7 @@ class TestGitHubActionsGenerator:
             generator.save_workflow(workflow_content, output_path)
 
             assert output_path.exists()
-            assert "Refactron Code Analysis" in output_path.read_text()
+            assert "Refactron Code Analysis" in output_path.read_text(encoding="utf-8")
 
 
 class TestGitLabCIGenerator:
@@ -337,7 +337,7 @@ class TestGitLabCIGenerator:
             generator.save_pipeline(pipeline_content, output_path)
 
             assert output_path.exists()
-            assert "analyze:" in output_path.read_text()
+            assert "analyze:" in output_path.read_text(encoding="utf-8")
 
 
 class TestPreCommitGenerator:
@@ -370,10 +370,12 @@ class TestPreCommitGenerator:
             generator.save_config(config_content, output_path)
 
             assert output_path.exists()
-            assert "refactron" in output_path.read_text()
+            assert "refactron" in output_path.read_text(encoding="utf-8")
 
     def test_save_hook(self) -> None:
         """Test saving pre-commit hook script."""
+        import sys
+
         generator = PreCommitGenerator()
         hook_content = generator.generate_simple_hook()
 
@@ -382,7 +384,9 @@ class TestPreCommitGenerator:
             generator.save_hook(hook_content, output_path)
 
             assert output_path.exists()
-            assert output_path.stat().st_mode & 0o111  # Executable
+            # chmod(0o755) has no effect on Windows; skip the bit-check there.
+            if sys.platform != "win32":
+                assert output_path.stat().st_mode & 0o111  # Executable
 
 
 class TestPRIntegration:
