@@ -27,6 +27,7 @@ class WorkspaceMapping:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
+            "repo_name": self.repo_name,
             "repo_full_name": self.repo_full_name,
             "local_path": self.local_path,
             "connected_at": self.connected_at,

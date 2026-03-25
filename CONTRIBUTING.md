@@ -163,9 +163,7 @@ git checkout -b feature/my-improvement
 
 # 2. Make changes and test
 # Edit files...
-pytest
-black refactron tests
-flake8 refactron
+pip
 
 # 3. Commit and push
 git add .
