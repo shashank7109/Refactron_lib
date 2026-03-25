@@ -202,16 +202,14 @@ class TestConfirmApplyMode:
         mock_print.assert_not_called()
 
     def test_apply_mode_confirmed(self):
-        with (
-            patch.object(console, "print"),
-            patch("refactron.cli.ui.click.confirm", return_value=True),
+        with patch.object(console, "print"), patch(
+            "refactron.cli.ui.click.confirm", return_value=True
         ):
             _confirm_apply_mode(preview=False)  # Should not raise
 
     def test_apply_mode_cancelled(self):
-        with (
-            patch.object(console, "print"),
-            patch("refactron.cli.ui.click.confirm", return_value=False),
+        with patch.object(console, "print"), patch(
+            "refactron.cli.ui.click.confirm", return_value=False
         ):
             with pytest.raises(SystemExit):
                 _confirm_apply_mode(preview=False)
@@ -280,9 +278,8 @@ class TestCollectFeedbackInteractive:
         result = MagicMock()
         result.operations = [op]
         result.get_ranking_score.return_value = 0.5
-        with (
-            patch.object(console, "print"),
-            patch("refactron.cli.ui.click.prompt", return_value="s"),
+        with patch.object(console, "print"), patch(
+            "refactron.cli.ui.click.prompt", return_value="s"
         ):
             _collect_feedback_interactive(refactron, result)
         refactron.record_feedback.assert_not_called()
@@ -297,9 +294,8 @@ class TestCollectFeedbackInteractive:
         result = MagicMock()
         result.operations = [op]
         result.get_ranking_score.return_value = 0.0
-        with (
-            patch.object(console, "print"),
-            patch("refactron.cli.ui.click.prompt", side_effect=["a", "looks good"]),
+        with patch.object(console, "print"), patch(
+            "refactron.cli.ui.click.prompt", side_effect=["a", "looks good"]
         ):
             _collect_feedback_interactive(refactron, result)
         refactron.record_feedback.assert_called_once()
@@ -314,9 +310,8 @@ class TestCollectFeedbackInteractive:
         result = MagicMock()
         result.operations = [op]
         result.get_ranking_score.return_value = 0.0
-        with (
-            patch.object(console, "print"),
-            patch("refactron.cli.ui.click.prompt", side_effect=["r", ""]),
+        with patch.object(console, "print"), patch(
+            "refactron.cli.ui.click.prompt", side_effect=["r", ""]
         ):
             _collect_feedback_interactive(refactron, result)
         refactron.record_feedback.assert_called_once()
@@ -369,18 +364,16 @@ class TestInteractiveFileSelector:
     def test_selects_file(self, tmp_path):
         (tmp_path / "a.py").write_text("x=1")
         (tmp_path / "b.py").write_text("y=2")
-        with (
-            patch("refactron.cli.ui.IntPrompt.ask", return_value=1),
-            patch.object(console, "print"),
+        with patch("refactron.cli.ui.IntPrompt.ask", return_value=1), patch.object(
+            console, "print"
         ):
             result = _interactive_file_selector(tmp_path, pattern="*.py")
         assert result is not None
 
     def test_out_of_range_selection(self, tmp_path):
         (tmp_path / "a.py").write_text("x=1")
-        with (
-            patch("refactron.cli.ui.IntPrompt.ask", return_value=999),
-            patch.object(console, "print"),
+        with patch("refactron.cli.ui.IntPrompt.ask", return_value=999), patch.object(
+            console, "print"
         ):
             result = _interactive_file_selector(tmp_path, pattern="*.py")
         assert result is None
@@ -388,9 +381,8 @@ class TestInteractiveFileSelector:
     def test_more_than_20_files(self, tmp_path):
         for i in range(25):
             (tmp_path / f"file{i}.py").write_text(f"x={i}")
-        with (
-            patch("refactron.cli.ui.IntPrompt.ask", return_value=0),
-            patch.object(console, "print"),
+        with patch("refactron.cli.ui.IntPrompt.ask", return_value=0), patch.object(
+            console, "print"
         ):
             result = _interactive_file_selector(tmp_path, pattern="*.py")
         assert result is None

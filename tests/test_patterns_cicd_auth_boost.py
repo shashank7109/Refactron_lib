@@ -496,9 +496,8 @@ class TestCliAuth:
         creds.access_token = "token"
         creds.email = "user@test.com"
         creds.expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
-        with (
-            patch("refactron.cli.auth._setup_logging"),
-            patch("refactron.cli.auth.load_credentials", return_value=creds),
+        with patch("refactron.cli.auth._setup_logging"), patch(
+            "refactron.cli.auth.load_credentials", return_value=creds
         ):
             result = runner.invoke(login, [])
         assert result.exit_code == 0
@@ -518,15 +517,18 @@ class TestCliAuth:
         token.expires_at.return_value = None
         token.email = "u@test.com"
         token.plan = "free"
-        with (
-            patch("refactron.cli.auth._setup_logging"),
-            patch("refactron.cli.auth.load_credentials", return_value=None),
-            patch("refactron.cli.auth.start_device_authorization", return_value=auth_result),
-            patch("refactron.cli.auth.poll_for_token", return_value=token),
-            patch("refactron.cli.auth.save_credentials"),
-            patch("refactron.cli.auth.credentials_path", return_value=Path("/tmp/creds.json")),
-            patch("refactron.cli.auth._auth_banner"),
-            patch("webbrowser.open"),
+        with patch("refactron.cli.auth._setup_logging"), patch(
+            "refactron.cli.auth.load_credentials", return_value=None
+        ), patch("refactron.cli.auth.start_device_authorization", return_value=auth_result), patch(
+            "refactron.cli.auth.poll_for_token", return_value=token
+        ), patch(
+            "refactron.cli.auth.save_credentials"
+        ), patch(
+            "refactron.cli.auth.credentials_path", return_value=Path("/tmp/creds.json")
+        ), patch(
+            "refactron.cli.auth._auth_banner"
+        ), patch(
+            "webbrowser.open"
         ):
             result = runner.invoke(login, ["--force"])
         assert result.exit_code == 0
@@ -534,12 +536,10 @@ class TestCliAuth:
     def test_login_start_device_auth_fails(self, runner):
         from refactron.cli.auth import login
 
-        with (
-            patch("refactron.cli.auth._setup_logging"),
-            patch("refactron.cli.auth.load_credentials", return_value=None),
-            patch(
-                "refactron.cli.auth.start_device_authorization", side_effect=Exception("conn fail")
-            ),
+        with patch("refactron.cli.auth._setup_logging"), patch(
+            "refactron.cli.auth.load_credentials", return_value=None
+        ), patch(
+            "refactron.cli.auth.start_device_authorization", side_effect=Exception("conn fail")
         ):
             result = runner.invoke(login, [])
         assert result.exit_code == 1
@@ -552,12 +552,12 @@ class TestCliAuth:
         auth_result.device_code = "dev"
         auth_result.interval = 5
         auth_result.expires_in = 60
-        with (
-            patch("refactron.cli.auth._setup_logging"),
-            patch("refactron.cli.auth.load_credentials", return_value=None),
-            patch("refactron.cli.auth.start_device_authorization", return_value=auth_result),
-            patch("refactron.cli.auth.poll_for_token", side_effect=Exception("timeout")),
-            patch("webbrowser.open"),
+        with patch("refactron.cli.auth._setup_logging"), patch(
+            "refactron.cli.auth.load_credentials", return_value=None
+        ), patch("refactron.cli.auth.start_device_authorization", return_value=auth_result), patch(
+            "refactron.cli.auth.poll_for_token", side_effect=Exception("timeout")
+        ), patch(
+            "webbrowser.open"
         ):
             result = runner.invoke(login, [])
         assert result.exit_code == 1
@@ -565,31 +565,26 @@ class TestCliAuth:
     def test_logout_success(self, runner):
         from refactron.cli.auth import logout
 
-        with (
-            patch("refactron.cli.auth._setup_logging"),
-            patch("refactron.cli.auth.credentials_path", return_value=Path("/tmp/creds.json")),
-            patch("refactron.cli.auth.delete_credentials", return_value=True),
-        ):
+        with patch("refactron.cli.auth._setup_logging"), patch(
+            "refactron.cli.auth.credentials_path", return_value=Path("/tmp/creds.json")
+        ), patch("refactron.cli.auth.delete_credentials", return_value=True):
             result = runner.invoke(logout, [])
         assert "Logged Out" in result.output
 
     def test_logout_no_credentials(self, runner):
         from refactron.cli.auth import logout
 
-        with (
-            patch("refactron.cli.auth._setup_logging"),
-            patch("refactron.cli.auth.credentials_path", return_value=Path("/tmp/creds.json")),
-            patch("refactron.cli.auth.delete_credentials", return_value=False),
-        ):
+        with patch("refactron.cli.auth._setup_logging"), patch(
+            "refactron.cli.auth.credentials_path", return_value=Path("/tmp/creds.json")
+        ), patch("refactron.cli.auth.delete_credentials", return_value=False):
             result = runner.invoke(logout, [])
         assert "No credentials" in result.output
 
     def test_auth_status_not_logged_in(self, runner):
         from refactron.cli.auth import auth_status
 
-        with (
-            patch("refactron.cli.auth._setup_logging"),
-            patch("refactron.cli.auth.load_credentials", return_value=None),
+        with patch("refactron.cli.auth._setup_logging"), patch(
+            "refactron.cli.auth.load_credentials", return_value=None
         ):
             result = runner.invoke(auth_status, [])
         assert "Not logged in" in result.output
@@ -604,11 +599,9 @@ class TestCliAuth:
         creds.email = "user@test.com"
         creds.plan = "pro"
         creds.api_base_url = "https://api.refactron.dev"
-        with (
-            patch("refactron.cli.auth._setup_logging"),
-            patch("refactron.cli.auth.load_credentials", return_value=creds),
-            patch("refactron.cli.auth._auth_banner"),
-        ):
+        with patch("refactron.cli.auth._setup_logging"), patch(
+            "refactron.cli.auth.load_credentials", return_value=creds
+        ), patch("refactron.cli.auth._auth_banner"):
             result = runner.invoke(auth_status, [])
         assert "Active" in result.output
 
@@ -622,11 +615,9 @@ class TestCliAuth:
         creds.email = "user@test.com"
         creds.plan = "free"
         creds.api_base_url = "https://api.refactron.dev"
-        with (
-            patch("refactron.cli.auth._setup_logging"),
-            patch("refactron.cli.auth.load_credentials", return_value=creds),
-            patch("refactron.cli.auth._auth_banner"),
-        ):
+        with patch("refactron.cli.auth._setup_logging"), patch(
+            "refactron.cli.auth.load_credentials", return_value=creds
+        ), patch("refactron.cli.auth._auth_banner"):
             result = runner.invoke(auth_status, [])
         assert "Expired" in result.output
 

@@ -20,11 +20,10 @@ def make_indexer(tmp_path: Path):
     mock_chroma_client = MagicMock()
     mock_chroma_client.get_or_create_collection.return_value = mock_collection
 
-    with (
-        patch("refactron.rag.indexer.CHROMA_AVAILABLE", True),
-        patch("refactron.rag.indexer.SentenceTransformer", return_value=mock_embedding_model),
-        patch("refactron.rag.indexer.chromadb") as mock_chromadb,
-        patch("refactron.rag.indexer.Settings"),
+    with patch("refactron.rag.indexer.CHROMA_AVAILABLE", True), patch(
+        "refactron.rag.indexer.SentenceTransformer", return_value=mock_embedding_model
+    ), patch("refactron.rag.indexer.chromadb") as mock_chromadb, patch(
+        "refactron.rag.indexer.Settings"
     ):
         mock_chromadb.PersistentClient.return_value = mock_chroma_client
         from refactron.rag.indexer import RAGIndexer

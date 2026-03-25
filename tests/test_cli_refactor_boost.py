@@ -42,11 +42,9 @@ def mock_refactor_result():
 
 class TestRefactorCommand:
     def test_no_target_no_workspace(self, runner, mock_cfg):
-        with (
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor._auth_banner"),
-            patch("refactron.cli.refactor.WorkspaceManager") as mock_ws,
-        ):
+        with patch("refactron.cli.refactor._setup_logging"), patch(
+            "refactron.cli.refactor._auth_banner"
+        ), patch("refactron.cli.refactor.WorkspaceManager") as mock_ws:
             mock_ws.return_value.get_workspace_by_path.return_value = None
             result = runner.invoke(refactor, [])
         assert result.exit_code == 1
@@ -54,16 +52,20 @@ class TestRefactorCommand:
     def test_refactor_preview(self, runner, tmp_path, mock_cfg, mock_refactor_result):
         py_file = tmp_path / "sample.py"
         py_file.write_text("x = 1\n")
-        with (
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor._auth_banner"),
-            patch("refactron.cli.refactor._load_config", return_value=mock_cfg),
-            patch("refactron.cli.refactor._validate_path", return_value=tmp_path),
-            patch("refactron.cli.refactor._print_refactor_filters"),
-            patch("refactron.cli.refactor._confirm_apply_mode"),
-            patch("refactron.cli.refactor.Refactron") as mock_ref,
-            patch("refactron.cli.refactor._create_refactor_table", return_value=MagicMock()),
-            patch("refactron.cli.refactor._print_refactor_messages"),
+        with patch("refactron.cli.refactor._setup_logging"), patch(
+            "refactron.cli.refactor._auth_banner"
+        ), patch("refactron.cli.refactor._load_config", return_value=mock_cfg), patch(
+            "refactron.cli.refactor._validate_path", return_value=tmp_path
+        ), patch(
+            "refactron.cli.refactor._print_refactor_filters"
+        ), patch(
+            "refactron.cli.refactor._confirm_apply_mode"
+        ), patch(
+            "refactron.cli.refactor.Refactron"
+        ) as mock_ref, patch(
+            "refactron.cli.refactor._create_refactor_table", return_value=MagicMock()
+        ), patch(
+            "refactron.cli.refactor._print_refactor_messages"
         ):
             mock_ref.return_value.refactor.return_value = mock_refactor_result
             result = runner.invoke(refactor, [str(py_file)])
@@ -72,15 +74,17 @@ class TestRefactorCommand:
     def test_refactor_failure(self, runner, tmp_path, mock_cfg):
         py_file = tmp_path / "sample.py"
         py_file.write_text("x = 1\n")
-        with (
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor._auth_banner"),
-            patch("refactron.cli.refactor._load_config", return_value=mock_cfg),
-            patch("refactron.cli.refactor._validate_path", return_value=tmp_path),
-            patch("refactron.cli.refactor._print_refactor_filters"),
-            patch("refactron.cli.refactor._confirm_apply_mode"),
-            patch("refactron.cli.refactor.Refactron") as mock_ref,
-        ):
+        with patch("refactron.cli.refactor._setup_logging"), patch(
+            "refactron.cli.refactor._auth_banner"
+        ), patch("refactron.cli.refactor._load_config", return_value=mock_cfg), patch(
+            "refactron.cli.refactor._validate_path", return_value=tmp_path
+        ), patch(
+            "refactron.cli.refactor._print_refactor_filters"
+        ), patch(
+            "refactron.cli.refactor._confirm_apply_mode"
+        ), patch(
+            "refactron.cli.refactor.Refactron"
+        ) as mock_ref:
             mock_ref.return_value.refactor.side_effect = RuntimeError("fail")
             result = runner.invoke(refactor, [str(py_file)])
         assert result.exit_code == 1
@@ -91,17 +95,22 @@ class TestRefactorCommand:
         mock_ws_obj = MagicMock()
         mock_ws_obj.local_path = str(tmp_path)
         mock_ws_obj.repo_full_name = "user/repo"
-        with (
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor._auth_banner"),
-            patch("refactron.cli.refactor._load_config", return_value=mock_cfg),
-            patch("refactron.cli.refactor._validate_path", return_value=tmp_path),
-            patch("refactron.cli.refactor._print_refactor_filters"),
-            patch("refactron.cli.refactor._confirm_apply_mode"),
-            patch("refactron.cli.refactor.WorkspaceManager") as mock_ws,
-            patch("refactron.cli.refactor.Refactron") as mock_ref,
-            patch("refactron.cli.refactor._create_refactor_table", return_value=MagicMock()),
-            patch("refactron.cli.refactor._print_refactor_messages"),
+        with patch("refactron.cli.refactor._setup_logging"), patch(
+            "refactron.cli.refactor._auth_banner"
+        ), patch("refactron.cli.refactor._load_config", return_value=mock_cfg), patch(
+            "refactron.cli.refactor._validate_path", return_value=tmp_path
+        ), patch(
+            "refactron.cli.refactor._print_refactor_filters"
+        ), patch(
+            "refactron.cli.refactor._confirm_apply_mode"
+        ), patch(
+            "refactron.cli.refactor.WorkspaceManager"
+        ) as mock_ws, patch(
+            "refactron.cli.refactor.Refactron"
+        ) as mock_ref, patch(
+            "refactron.cli.refactor._create_refactor_table", return_value=MagicMock()
+        ), patch(
+            "refactron.cli.refactor._print_refactor_messages"
         ):
             mock_ws.return_value.get_workspace_by_path.return_value = mock_ws_obj
             mock_ref.return_value.refactor.return_value = mock_refactor_result
@@ -112,17 +121,22 @@ class TestRefactorCommand:
         py_file = tmp_path / "sample.py"
         py_file.write_text("x = 1\n")
         mock_cfg.backup_enabled = True
-        with (
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor._auth_banner"),
-            patch("refactron.cli.refactor._load_config", return_value=mock_cfg),
-            patch("refactron.cli.refactor._validate_path", return_value=tmp_path),
-            patch("refactron.cli.refactor._print_refactor_filters"),
-            patch("refactron.cli.refactor._confirm_apply_mode"),
-            patch("refactron.cli.refactor.BackupRollbackSystem") as mock_brs,
-            patch("refactron.cli.refactor.Refactron") as mock_ref,
-            patch("refactron.cli.refactor._create_refactor_table", return_value=MagicMock()),
-            patch("refactron.cli.refactor._print_refactor_messages"),
+        with patch("refactron.cli.refactor._setup_logging"), patch(
+            "refactron.cli.refactor._auth_banner"
+        ), patch("refactron.cli.refactor._load_config", return_value=mock_cfg), patch(
+            "refactron.cli.refactor._validate_path", return_value=tmp_path
+        ), patch(
+            "refactron.cli.refactor._print_refactor_filters"
+        ), patch(
+            "refactron.cli.refactor._confirm_apply_mode"
+        ), patch(
+            "refactron.cli.refactor.BackupRollbackSystem"
+        ) as mock_brs, patch(
+            "refactron.cli.refactor.Refactron"
+        ) as mock_ref, patch(
+            "refactron.cli.refactor._create_refactor_table", return_value=MagicMock()
+        ), patch(
+            "refactron.cli.refactor._print_refactor_messages"
         ):
             mock_ref_inst = MagicMock()
             mock_ref_inst.detect_project_root.return_value = tmp_path
@@ -142,17 +156,22 @@ class TestRefactorCommand:
         py_file.write_text("x = 1\n")
         mock_refactor_result.operations = [MagicMock(metadata={})]
         mock_refactor_result.summary.return_value["total_operations"] = 1
-        with (
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor._auth_banner"),
-            patch("refactron.cli.refactor._load_config", return_value=mock_cfg),
-            patch("refactron.cli.refactor._validate_path", return_value=tmp_path),
-            patch("refactron.cli.refactor._print_refactor_filters"),
-            patch("refactron.cli.refactor._confirm_apply_mode"),
-            patch("refactron.cli.refactor.Refactron") as mock_ref,
-            patch("refactron.cli.refactor._create_refactor_table", return_value=MagicMock()),
-            patch("refactron.cli.refactor._print_refactor_messages"),
-            patch("refactron.cli.refactor._record_applied_operations"),
+        with patch("refactron.cli.refactor._setup_logging"), patch(
+            "refactron.cli.refactor._auth_banner"
+        ), patch("refactron.cli.refactor._load_config", return_value=mock_cfg), patch(
+            "refactron.cli.refactor._validate_path", return_value=tmp_path
+        ), patch(
+            "refactron.cli.refactor._print_refactor_filters"
+        ), patch(
+            "refactron.cli.refactor._confirm_apply_mode"
+        ), patch(
+            "refactron.cli.refactor.Refactron"
+        ) as mock_ref, patch(
+            "refactron.cli.refactor._create_refactor_table", return_value=MagicMock()
+        ), patch(
+            "refactron.cli.refactor._print_refactor_messages"
+        ), patch(
+            "refactron.cli.refactor._record_applied_operations"
         ):
             mock_cfg.backup_enabled = False
             mock_ref.return_value.refactor.return_value = mock_refactor_result
@@ -167,11 +186,10 @@ class TestAutofixCommand:
     def test_autofix_preview_mode(self, runner, tmp_path, mock_cfg):
         py_file = tmp_path / "sample.py"
         py_file.write_text("x = 1\n")
-        with (
-            patch("refactron.cli.refactor._load_config", return_value=mock_cfg),
-            patch("refactron.cli.refactor._validate_path", return_value=tmp_path),
-            patch("refactron.cli.refactor._print_file_count"),
-            patch("refactron.cli.refactor._auth_banner"),
+        with patch("refactron.cli.refactor._load_config", return_value=mock_cfg), patch(
+            "refactron.cli.refactor._validate_path", return_value=tmp_path
+        ), patch("refactron.cli.refactor._print_file_count"), patch(
+            "refactron.cli.refactor._auth_banner"
         ):
             result = runner.invoke(autofix, [str(py_file)])
         assert result.exit_code == 0
@@ -180,11 +198,10 @@ class TestAutofixCommand:
     def test_autofix_apply_mode(self, runner, tmp_path, mock_cfg):
         py_file = tmp_path / "sample.py"
         py_file.write_text("x = 1\n")
-        with (
-            patch("refactron.cli.refactor._load_config", return_value=mock_cfg),
-            patch("refactron.cli.refactor._validate_path", return_value=tmp_path),
-            patch("refactron.cli.refactor._print_file_count"),
-            patch("refactron.cli.refactor._auth_banner"),
+        with patch("refactron.cli.refactor._load_config", return_value=mock_cfg), patch(
+            "refactron.cli.refactor._validate_path", return_value=tmp_path
+        ), patch("refactron.cli.refactor._print_file_count"), patch(
+            "refactron.cli.refactor._auth_banner"
         ):
             result = runner.invoke(autofix, [str(py_file), "--apply"])
         assert result.exit_code == 0
@@ -193,11 +210,10 @@ class TestAutofixCommand:
         py_file = tmp_path / "s.py"
         py_file.write_text("x = 1\n")
         for level in ["safe", "low", "moderate", "high"]:
-            with (
-                patch("refactron.cli.refactor._load_config", return_value=mock_cfg),
-                patch("refactron.cli.refactor._validate_path", return_value=tmp_path),
-                patch("refactron.cli.refactor._print_file_count"),
-                patch("refactron.cli.refactor._auth_banner"),
+            with patch("refactron.cli.refactor._load_config", return_value=mock_cfg), patch(
+                "refactron.cli.refactor._validate_path", return_value=tmp_path
+            ), patch("refactron.cli.refactor._print_file_count"), patch(
+                "refactron.cli.refactor._auth_banner"
             ):
                 result = runner.invoke(autofix, [str(py_file), "--safety-level", level])
             assert result.exit_code == 0
@@ -308,13 +324,14 @@ class TestDocumentCommand:
         mock_sugg.model_name = "model"
         mock_sugg.confidence_score = 0.9
 
-        with (
-            patch("refactron.cli.refactor._load_config"),
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor.Refactron") as mock_ref,
-            patch("refactron.cli.refactor.ContextRetriever"),
-            patch("refactron.cli.refactor.LLMOrchestrator") as mock_orch,
-            patch("refactron.cli.refactor._auth_banner"),
+        with patch("refactron.cli.refactor._load_config"), patch(
+            "refactron.cli.refactor._setup_logging"
+        ), patch("refactron.cli.refactor.Refactron") as mock_ref, patch(
+            "refactron.cli.refactor.ContextRetriever"
+        ), patch(
+            "refactron.cli.refactor.LLMOrchestrator"
+        ) as mock_orch, patch(
+            "refactron.cli.refactor._auth_banner"
         ):
             mock_ref.return_value.detect_project_root.return_value = tmp_path
             mock_orch.return_value.generate_documentation.return_value = mock_sugg
@@ -322,13 +339,14 @@ class TestDocumentCommand:
         assert result.exit_code == 0
 
     def test_document_directory_not_supported(self, runner, tmp_path):
-        with (
-            patch("refactron.cli.refactor._load_config"),
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor.Refactron") as mock_ref,
-            patch("refactron.cli.refactor.ContextRetriever"),
-            patch("refactron.cli.refactor.LLMOrchestrator"),
-            patch("refactron.cli.refactor._auth_banner"),
+        with patch("refactron.cli.refactor._load_config"), patch(
+            "refactron.cli.refactor._setup_logging"
+        ), patch("refactron.cli.refactor.Refactron") as mock_ref, patch(
+            "refactron.cli.refactor.ContextRetriever"
+        ), patch(
+            "refactron.cli.refactor.LLMOrchestrator"
+        ), patch(
+            "refactron.cli.refactor._auth_banner"
         ):
             mock_ref.return_value.detect_project_root.return_value = tmp_path
             result = runner.invoke(document, [str(tmp_path)])
@@ -344,13 +362,14 @@ class TestDocumentCommand:
         mock_sugg.status = SuggestionStatus.FAILED
         mock_sugg.explanation = "No LLM"
 
-        with (
-            patch("refactron.cli.refactor._load_config"),
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor.Refactron") as mock_ref,
-            patch("refactron.cli.refactor.ContextRetriever"),
-            patch("refactron.cli.refactor.LLMOrchestrator") as mock_orch,
-            patch("refactron.cli.refactor._auth_banner"),
+        with patch("refactron.cli.refactor._load_config"), patch(
+            "refactron.cli.refactor._setup_logging"
+        ), patch("refactron.cli.refactor.Refactron") as mock_ref, patch(
+            "refactron.cli.refactor.ContextRetriever"
+        ), patch(
+            "refactron.cli.refactor.LLMOrchestrator"
+        ) as mock_orch, patch(
+            "refactron.cli.refactor._auth_banner"
         ):
             mock_ref.return_value.detect_project_root.return_value = tmp_path
             mock_orch.return_value.generate_documentation.return_value = mock_sugg
@@ -370,13 +389,14 @@ class TestDocumentCommand:
         mock_sugg.model_name = "m"
         mock_sugg.confidence_score = 0.8
 
-        with (
-            patch("refactron.cli.refactor._load_config"),
-            patch("refactron.cli.refactor._setup_logging"),
-            patch("refactron.cli.refactor.Refactron") as mock_ref,
-            patch("refactron.cli.refactor.ContextRetriever"),
-            patch("refactron.cli.refactor.LLMOrchestrator") as mock_orch,
-            patch("refactron.cli.refactor._auth_banner"),
+        with patch("refactron.cli.refactor._load_config"), patch(
+            "refactron.cli.refactor._setup_logging"
+        ), patch("refactron.cli.refactor.Refactron") as mock_ref, patch(
+            "refactron.cli.refactor.ContextRetriever"
+        ), patch(
+            "refactron.cli.refactor.LLMOrchestrator"
+        ) as mock_orch, patch(
+            "refactron.cli.refactor._auth_banner"
         ):
             mock_ref.return_value.detect_project_root.return_value = tmp_path
             mock_orch.return_value.generate_documentation.return_value = mock_sugg
